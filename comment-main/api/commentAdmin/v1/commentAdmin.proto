@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package api.comment.admin.v1;
+
+option go_package = "comment-main/api/commentAdmin/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.commentAdmin.v1";
+
+service CommentAdmin {
+	rpc CreateCommentAdmin (CreateCommentAdminRequest) returns (CreateCommentAdminReply);
+	rpc UpdateCommentAdmin (UpdateCommentAdminRequest) returns (UpdateCommentAdminReply);
+	rpc DeleteCommentAdmin (DeleteCommentAdminRequest) returns (DeleteCommentAdminReply);
+	rpc GetCommentAdmin (GetCommentAdminRequest) returns (GetCommentAdminReply);
+	rpc ListCommentAdmin (ListCommentAdminRequest) returns (ListCommentAdminReply);
+}
+
+message CreateCommentAdminRequest {}
+message CreateCommentAdminReply {}
+
+message UpdateCommentAdminRequest {}
+message UpdateCommentAdminReply {}
+
+message DeleteCommentAdminRequest {}
+message DeleteCommentAdminReply {}
+
+message GetCommentAdminRequest {}
+message GetCommentAdminReply {}
+
+message ListCommentAdminRequest {}
+message ListCommentAdminReply {}

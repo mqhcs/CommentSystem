@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package api.filter.service.v1;
+
+option go_package = "comment-main/api/filterService/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.filterService.v1";
+
+service FilterService {
+	rpc CreateFilterService (CreateFilterServiceRequest) returns (CreateFilterServiceReply);
+	rpc UpdateFilterService (UpdateFilterServiceRequest) returns (UpdateFilterServiceReply);
+	rpc DeleteFilterService (DeleteFilterServiceRequest) returns (DeleteFilterServiceReply);
+	rpc GetFilterService (GetFilterServiceRequest) returns (GetFilterServiceReply);
+	rpc ListFilterService (ListFilterServiceRequest) returns (ListFilterServiceReply);
+}
+
+message CreateFilterServiceRequest {}
+message CreateFilterServiceReply {}
+
+message UpdateFilterServiceRequest {}
+message UpdateFilterServiceReply {}
+
+message DeleteFilterServiceRequest {}
+message DeleteFilterServiceReply {}
+
+message GetFilterServiceRequest {}
+message GetFilterServiceReply {}
+
+message ListFilterServiceRequest {}
+message ListFilterServiceReply {}

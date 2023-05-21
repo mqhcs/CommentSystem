@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package api.comment.service.v1;
+
+option go_package = "comment-main/api/commentService/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.commentService.v1";
+
+import "google/api/annotations.proto";
+
+service CommentService {
+	rpc CreateCommentService (CreateCommentServiceRequest) returns (CreateCommentServiceReply){
+		option (google.api.http) = {
+			post: "/v1/reply"
+			body: "*"
+		};
+	};
+	rpc UpdateCommentService (UpdateCommentServiceRequest) returns (UpdateCommentServiceReply);
+	rpc DeleteCommentService (DeleteCommentServiceRequest) returns (DeleteCommentServiceReply);
+	rpc GetCommentService (GetCommentServiceRequest) returns (GetCommentServiceReply);
+	rpc ListCommentService (ListCommentServiceRequest) returns (ListCommentServiceReply);
+}
+
+message CreateCommentServiceRequest {}
+message CreateCommentServiceReply {}
+
+message UpdateCommentServiceRequest {}
+message UpdateCommentServiceReply {}
+
+message DeleteCommentServiceRequest {}
+message DeleteCommentServiceReply {}
+
+message GetCommentServiceRequest {}
+message GetCommentServiceReply {}
+
+message ListCommentServiceRequest {}
+message ListCommentServiceReply {}

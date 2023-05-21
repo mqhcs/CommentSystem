@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package api.commentJob.v1;
+
+option go_package = "comment-main/api/commentJob/v1;v1";
+option java_multiple_files = true;
+option java_package = "api.commentJob.v1";
+
+service CommentJob {
+	rpc CreateCommentJob (CreateCommentJobRequest) returns (CreateCommentJobReply);
+	rpc UpdateCommentJob (UpdateCommentJobRequest) returns (UpdateCommentJobReply);
+	rpc DeleteCommentJob (DeleteCommentJobRequest) returns (DeleteCommentJobReply);
+	rpc GetCommentJob (GetCommentJobRequest) returns (GetCommentJobReply);
+	rpc ListCommentJob (ListCommentJobRequest) returns (ListCommentJobReply);
+}
+
+message CreateCommentJobRequest {}
+message CreateCommentJobReply {}
+
+message UpdateCommentJobRequest {}
+message UpdateCommentJobReply {}
+
+message DeleteCommentJobRequest {}
+message DeleteCommentJobReply {}
+
+message GetCommentJobRequest {}
+message GetCommentJobReply {}
+
+message ListCommentJobRequest {}
+message ListCommentJobReply {}
