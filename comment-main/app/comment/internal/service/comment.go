@@ -1,17 +1,26 @@
 package service
 
 import (
-	"context"
-
 	pb "comment-main/api/comment/v1"
+	"comment-main/app/comment/internal/biz"
+	"context"
+	"github.com/go-kratos/kratos/v2/log"
+	"github.com/google/wire"
 )
+
+var ProviderSet = wire.NewSet(NewCommentService())
 
 type CommentService struct {
 	pb.UnimplementedCommentServer
+	uc  *biz.UserUsecase
+	log *log.Helper
 }
 
 func NewCommentService() *CommentService {
-	return &CommentService{}
+	return &CommentService{
+		uc:  uc,
+		log: log.NewHelper(log.With(logger, "module", "service/comment")),
+	}
 }
 
 func (s *CommentService) CreateComment(ctx context.Context, req *pb.CreateCommentRequest) (*pb.CreateCommentReply, error) {

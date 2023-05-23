@@ -10,10 +10,7 @@ import "google/api/annotations.proto";
 
 service CommentService {
 	rpc CreateCommentService (CreateCommentServiceRequest) returns (CreateCommentServiceReply){
-		option (google.api.http) = {
-			post: "/v1/reply"
-			body: "*"
-		};
+
 	};
 	rpc UpdateCommentService (UpdateCommentServiceRequest) returns (UpdateCommentServiceReply);
 	rpc DeleteCommentService (DeleteCommentServiceRequest) returns (DeleteCommentServiceReply);
@@ -33,5 +30,9 @@ message DeleteCommentServiceReply {}
 message GetCommentServiceRequest {}
 message GetCommentServiceReply {}
 
-message ListCommentServiceRequest {}
-message ListCommentServiceReply {}
+message ListCommentServiceRequest {
+	string identity = 1;
+}
+message ListCommentServiceReply {
+	repeated Reply Reply = 1;
+}

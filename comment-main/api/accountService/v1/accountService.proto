@@ -7,8 +7,8 @@ option java_multiple_files = true;
 option java_package = "api.accountService.v1";
 
 service AccountService {
-	rpc CreateAccountService (CreateAccountServiceRequest) returns (CreateAccountServiceReply);
-	rpc UpdateAccountService (UpdateAccountServiceRequest) returns (UpdateAccountServiceReply);
+	rpc CreateAccountService (CreateAccountServiceRequest) returns (CreateAccountServiceReply);//创建用户
+	rpc UpdateAccountService (UpdateAccountServiceRequest) returns (UpdateAccountServiceReply);//更新用户
 	rpc DeleteAccountService (DeleteAccountServiceRequest) returns (DeleteAccountServiceReply);
 	rpc GetAccountService (GetAccountServiceRequest) returns (GetAccountServiceReply);
 	rpc ListAccountService (ListAccountServiceRequest) returns (ListAccountServiceReply);

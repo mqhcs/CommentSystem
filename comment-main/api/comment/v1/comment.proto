@@ -7,15 +7,62 @@ option java_multiple_files = true;
 option java_package = "api.comment.v1";
 
 service Comment {
-	rpc CreateComment (CreateCommentRequest) returns (CreateCommentReply);
-	rpc UpdateComment (UpdateCommentRequest) returns (UpdateCommentReply);
+	rpc CreateComment (CreateCommentRequest) returns (CreateCommentReply){
+		post: "/api/reply/add",
+		body: "*",
+	};
+	rpc UpdateComment (UpdateCommentRequest) returns (UpdateCommentReply){
+		int64 oid = 1;
+		int8 type = 2;
+		string message = 3;
+	};
 	rpc DeleteComment (DeleteCommentRequest) returns (DeleteCommentReply);
 	rpc GetComment (GetCommentRequest) returns (GetCommentReply);
-	rpc ListComment (ListCommentRequest) returns (ListCommentReply);
+	rpc ListComment (ListCommentRequest) returns (ListCommentReply){
+		post: "/api/reply/main",
+		body: "*",
+	};
 }
 
-message CreateCommentRequest {}
-message CreateCommentReply {}
+message CreateCommentRequest {
+	int64 oid = 1;
+	int8 type = 2;
+	string message = 3;
+	int64 parent = 4;
+	int64 root = 5;
+	string at = 6;
+	int32 plat = 7;
+	string device = 8;
+	int32 code = 9;
+	int64 vote = 10;
+	int64 lottery = 11;
+	string csrf_token = 12;
+	string goods_item_id = 13;
+	text from = 14;
+	int64 activity_id = 15;
+	int8 is_new_activity = 16;
+}
+message CreateCommentReply {
+	int32 code = 1;
+	string message = 2;
+	int64 ttl = 3;
+	message data{
+		string success_toast = 1;
+		bool change_nickname_prompt = 2;
+		int8 success_action = 3;
+		string url = 4;
+		string urlv2 = 5;
+		int64 rpid = 6;
+		string rpid_str = 7;
+		int64 dialog = 8;
+		string dialog_str = 9;
+		int64 root = 10;
+		string root_str = 11;
+		int64 parent = 10;
+		string parent_str = 11;
+		bool need_captcha_v2 = 12;
+	}
+}
 
 message UpdateCommentRequest {}
 message UpdateCommentReply {}
@@ -26,5 +73,44 @@ message DeleteCommentReply {}
 message GetCommentRequest {}
 message GetCommentReply {}
 
-message ListCommentRequest {}
-message ListCommentReply {}
+message ListCommentRequest {
+	int64  oid = 1;
+	int8 type = 2;
+	int64 mode = 3;
+	int64 next = 4;
+	int64 prev = 5;
+	int64 extrs = 6;
+}
+message hots{
+
+}
+message replies{
+
+}
+message ListCommentReply {
+	int32 code = 1;
+	message data{
+		message cursor{}
+		message control{}
+		repeated hots = 1;
+		message  notice{}
+		repeated replies = 2;
+		message top{}
+		message folder{}
+		int8 assist = 3;
+		int8 blacklist = 4;
+		int8 vote = 5;
+		int8 lottery = 6;
+		message lottery_card{}
+		message config{}
+		message upper{}
+		int64 activity_id = 7;
+		int8 activity = 8;
+		int8 activity_state = 9;
+		string activity_placeholder = 10;
+		message up_selection{}
+		message cm{}
+	}
+
+
+}
