@@ -8,9 +8,11 @@ import (
 	"fmt"
 	"log"
 
-	"entcdemo/ent/migrate"
+	"comment-main/app/comment-service/internal/data/ent/migrate"
 
-	"entcdemo/ent/reply"
+	"comment-main/app/comment-service/internal/data/ent/reply"
+	"comment-main/app/comment-service/internal/data/ent/replyarea"
+	"comment-main/app/comment-service/internal/data/ent/replyindex"
 
 	"entgo.io/ent"
 	"entgo.io/ent/dialect"
@@ -24,6 +26,10 @@ type Client struct {
 	Schema *migrate.Schema
 	// Reply is the client for interacting with the Reply builders.
 	Reply *ReplyClient
+	// ReplyArea is the client for interacting with the ReplyArea builders.
+	ReplyArea *ReplyAreaClient
+	// ReplyIndex is the client for interacting with the ReplyIndex builders.
+	ReplyIndex *ReplyIndexClient
 }
 
 // NewClient creates a new client configured with the given options.
@@ -38,6 +44,8 @@ func NewClient(opts ...Option) *Client {
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
 	c.Reply = NewReplyClient(c.config)
+	c.ReplyArea = NewReplyAreaClient(c.config)
+	c.ReplyIndex = NewReplyIndexClient(c.config)
 }
 
 type (
@@ -118,9 +126,11 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		Reply:  NewReplyClient(cfg),
+		ctx:        ctx,
+		config:     cfg,
+		Reply:      NewReplyClient(cfg),
+		ReplyArea:  NewReplyAreaClient(cfg),
+		ReplyIndex: NewReplyIndexClient(cfg),
 	}, nil
 }
 
@@ -138,9 +148,11 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:    ctx,
-		config: cfg,
-		Reply:  NewReplyClient(cfg),
+		ctx:        ctx,
+		config:     cfg,
+		Reply:      NewReplyClient(cfg),
+		ReplyArea:  NewReplyAreaClient(cfg),
+		ReplyIndex: NewReplyIndexClient(cfg),
 	}, nil
 }
 
@@ -170,12 +182,16 @@ func (c *Client) Close() error {
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
 	c.Reply.Use(hooks...)
+	c.ReplyArea.Use(hooks...)
+	c.ReplyIndex.Use(hooks...)
 }
 
 // Intercept adds the query interceptors to all the entity clients.
 // In order to add interceptors to a specific client, call: `client.Node.Intercept(...)`.
 func (c *Client) Intercept(interceptors ...Interceptor) {
 	c.Reply.Intercept(interceptors...)
+	c.ReplyArea.Intercept(interceptors...)
+	c.ReplyIndex.Intercept(interceptors...)
 }
 
 // Mutate implements the ent.Mutator interface.
@@ -183,6 +199,10 @@ func (c *Client) Mutate(ctx context.Context, m Mutation) (Value, error) {
 	switch m := m.(type) {
 	case *ReplyMutation:
 		return c.Reply.mutate(ctx, m)
+	case *ReplyAreaMutation:
+		return c.ReplyArea.mutate(ctx, m)
+	case *ReplyIndexMutation:
+		return c.ReplyIndex.mutate(ctx, m)
 	default:
 		return nil, fmt.Errorf("ent: unknown mutation type %T", m)
 	}
@@ -234,7 +254,7 @@ func (c *ReplyClient) UpdateOne(r *Reply) *ReplyUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *ReplyClient) UpdateOneID(id int64) *ReplyUpdateOne {
+func (c *ReplyClient) UpdateOneID(id int) *ReplyUpdateOne {
 	mutation := newReplyMutation(c.config, OpUpdateOne, withReplyID(id))
 	return &ReplyUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -251,7 +271,7 @@ func (c *ReplyClient) DeleteOne(r *Reply) *ReplyDeleteOne {
 }
 
 // DeleteOneID returns a builder for deleting the given entity by its id.
-func (c *ReplyClient) DeleteOneID(id int64) *ReplyDeleteOne {
+func (c *ReplyClient) DeleteOneID(id int) *ReplyDeleteOne {
 	builder := c.Delete().Where(reply.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -268,12 +288,12 @@ func (c *ReplyClient) Query() *ReplyQuery {
 }
 
 // Get returns a Reply entity by its id.
-func (c *ReplyClient) Get(ctx context.Context, id int64) (*Reply, error) {
+func (c *ReplyClient) Get(ctx context.Context, id int) (*Reply, error) {
 	return c.Query().Where(reply.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *ReplyClient) GetX(ctx context.Context, id int64) *Reply {
+func (c *ReplyClient) GetX(ctx context.Context, id int) *Reply {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -306,12 +326,248 @@ func (c *ReplyClient) mutate(ctx context.Context, m *ReplyMutation) (Value, erro
 	}
 }
 
+// ReplyAreaClient is a client for the ReplyArea schema.
+type ReplyAreaClient struct {
+	config
+}
+
+// NewReplyAreaClient returns a client for the ReplyArea from the given config.
+func NewReplyAreaClient(c config) *ReplyAreaClient {
+	return &ReplyAreaClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `replyarea.Hooks(f(g(h())))`.
+func (c *ReplyAreaClient) Use(hooks ...Hook) {
+	c.hooks.ReplyArea = append(c.hooks.ReplyArea, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `replyarea.Intercept(f(g(h())))`.
+func (c *ReplyAreaClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ReplyArea = append(c.inters.ReplyArea, interceptors...)
+}
+
+// Create returns a builder for creating a ReplyArea entity.
+func (c *ReplyAreaClient) Create() *ReplyAreaCreate {
+	mutation := newReplyAreaMutation(c.config, OpCreate)
+	return &ReplyAreaCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ReplyArea entities.
+func (c *ReplyAreaClient) CreateBulk(builders ...*ReplyAreaCreate) *ReplyAreaCreateBulk {
+	return &ReplyAreaCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ReplyArea.
+func (c *ReplyAreaClient) Update() *ReplyAreaUpdate {
+	mutation := newReplyAreaMutation(c.config, OpUpdate)
+	return &ReplyAreaUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ReplyAreaClient) UpdateOne(ra *ReplyArea) *ReplyAreaUpdateOne {
+	mutation := newReplyAreaMutation(c.config, OpUpdateOne, withReplyArea(ra))
+	return &ReplyAreaUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ReplyAreaClient) UpdateOneID(id int64) *ReplyAreaUpdateOne {
+	mutation := newReplyAreaMutation(c.config, OpUpdateOne, withReplyAreaID(id))
+	return &ReplyAreaUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ReplyArea.
+func (c *ReplyAreaClient) Delete() *ReplyAreaDelete {
+	mutation := newReplyAreaMutation(c.config, OpDelete)
+	return &ReplyAreaDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ReplyAreaClient) DeleteOne(ra *ReplyArea) *ReplyAreaDeleteOne {
+	return c.DeleteOneID(ra.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ReplyAreaClient) DeleteOneID(id int64) *ReplyAreaDeleteOne {
+	builder := c.Delete().Where(replyarea.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ReplyAreaDeleteOne{builder}
+}
+
+// Query returns a query builder for ReplyArea.
+func (c *ReplyAreaClient) Query() *ReplyAreaQuery {
+	return &ReplyAreaQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeReplyArea},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ReplyArea entity by its id.
+func (c *ReplyAreaClient) Get(ctx context.Context, id int64) (*ReplyArea, error) {
+	return c.Query().Where(replyarea.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ReplyAreaClient) GetX(ctx context.Context, id int64) *ReplyArea {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ReplyAreaClient) Hooks() []Hook {
+	return c.hooks.ReplyArea
+}
+
+// Interceptors returns the client interceptors.
+func (c *ReplyAreaClient) Interceptors() []Interceptor {
+	return c.inters.ReplyArea
+}
+
+func (c *ReplyAreaClient) mutate(ctx context.Context, m *ReplyAreaMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ReplyAreaCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ReplyAreaUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ReplyAreaUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ReplyAreaDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ReplyArea mutation op: %q", m.Op())
+	}
+}
+
+// ReplyIndexClient is a client for the ReplyIndex schema.
+type ReplyIndexClient struct {
+	config
+}
+
+// NewReplyIndexClient returns a client for the ReplyIndex from the given config.
+func NewReplyIndexClient(c config) *ReplyIndexClient {
+	return &ReplyIndexClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `replyindex.Hooks(f(g(h())))`.
+func (c *ReplyIndexClient) Use(hooks ...Hook) {
+	c.hooks.ReplyIndex = append(c.hooks.ReplyIndex, hooks...)
+}
+
+// Intercept adds a list of query interceptors to the interceptors stack.
+// A call to `Intercept(f, g, h)` equals to `replyindex.Intercept(f(g(h())))`.
+func (c *ReplyIndexClient) Intercept(interceptors ...Interceptor) {
+	c.inters.ReplyIndex = append(c.inters.ReplyIndex, interceptors...)
+}
+
+// Create returns a builder for creating a ReplyIndex entity.
+func (c *ReplyIndexClient) Create() *ReplyIndexCreate {
+	mutation := newReplyIndexMutation(c.config, OpCreate)
+	return &ReplyIndexCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of ReplyIndex entities.
+func (c *ReplyIndexClient) CreateBulk(builders ...*ReplyIndexCreate) *ReplyIndexCreateBulk {
+	return &ReplyIndexCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for ReplyIndex.
+func (c *ReplyIndexClient) Update() *ReplyIndexUpdate {
+	mutation := newReplyIndexMutation(c.config, OpUpdate)
+	return &ReplyIndexUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *ReplyIndexClient) UpdateOne(ri *ReplyIndex) *ReplyIndexUpdateOne {
+	mutation := newReplyIndexMutation(c.config, OpUpdateOne, withReplyIndex(ri))
+	return &ReplyIndexUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *ReplyIndexClient) UpdateOneID(id int64) *ReplyIndexUpdateOne {
+	mutation := newReplyIndexMutation(c.config, OpUpdateOne, withReplyIndexID(id))
+	return &ReplyIndexUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for ReplyIndex.
+func (c *ReplyIndexClient) Delete() *ReplyIndexDelete {
+	mutation := newReplyIndexMutation(c.config, OpDelete)
+	return &ReplyIndexDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a builder for deleting the given entity.
+func (c *ReplyIndexClient) DeleteOne(ri *ReplyIndex) *ReplyIndexDeleteOne {
+	return c.DeleteOneID(ri.ID)
+}
+
+// DeleteOneID returns a builder for deleting the given entity by its id.
+func (c *ReplyIndexClient) DeleteOneID(id int64) *ReplyIndexDeleteOne {
+	builder := c.Delete().Where(replyindex.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &ReplyIndexDeleteOne{builder}
+}
+
+// Query returns a query builder for ReplyIndex.
+func (c *ReplyIndexClient) Query() *ReplyIndexQuery {
+	return &ReplyIndexQuery{
+		config: c.config,
+		ctx:    &QueryContext{Type: TypeReplyIndex},
+		inters: c.Interceptors(),
+	}
+}
+
+// Get returns a ReplyIndex entity by its id.
+func (c *ReplyIndexClient) Get(ctx context.Context, id int64) (*ReplyIndex, error) {
+	return c.Query().Where(replyindex.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *ReplyIndexClient) GetX(ctx context.Context, id int64) *ReplyIndex {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// Hooks returns the client hooks.
+func (c *ReplyIndexClient) Hooks() []Hook {
+	return c.hooks.ReplyIndex
+}
+
+// Interceptors returns the client interceptors.
+func (c *ReplyIndexClient) Interceptors() []Interceptor {
+	return c.inters.ReplyIndex
+}
+
+func (c *ReplyIndexClient) mutate(ctx context.Context, m *ReplyIndexMutation) (Value, error) {
+	switch m.Op() {
+	case OpCreate:
+		return (&ReplyIndexCreate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdate:
+		return (&ReplyIndexUpdate{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpUpdateOne:
+		return (&ReplyIndexUpdateOne{config: c.config, hooks: c.Hooks(), mutation: m}).Save(ctx)
+	case OpDelete, OpDeleteOne:
+		return (&ReplyIndexDelete{config: c.config, hooks: c.Hooks(), mutation: m}).Exec(ctx)
+	default:
+		return nil, fmt.Errorf("ent: unknown ReplyIndex mutation op: %q", m.Op())
+	}
+}
+
 // hooks and interceptors per client, for fast access.
 type (
 	hooks struct {
-		Reply []ent.Hook
+		Reply, ReplyArea, ReplyIndex []ent.Hook
 	}
 	inters struct {
-		Reply []ent.Interceptor
+		Reply, ReplyArea, ReplyIndex []ent.Interceptor
 	}
 )

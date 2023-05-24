@@ -15,7 +15,7 @@ type Reply struct {
 // Fields of the Reply.
 func (Reply) Fields() []ent.Field {
 	return []ent.Field{
-		field.Int64("id"),
+		field.Int64("rpid"),
 		field.String("message"),
 		field.String("ats"),
 		field.Int64("ip"),

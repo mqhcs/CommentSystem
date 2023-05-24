@@ -3,12 +3,12 @@
 package enttest
 
 import (
+	"comment-main/app/comment-service/internal/data/ent"
 	"context"
-	"entcdemo/ent"
 	// required by schema hooks.
-	_ "entcdemo/ent/runtime"
+	_ "comment-main/app/comment-service/internal/data/ent/runtime"
 
-	"entcdemo/ent/migrate"
+	"comment-main/app/comment-service/internal/data/ent/migrate"
 
 	"entgo.io/ent/dialect/sql/schema"
 )

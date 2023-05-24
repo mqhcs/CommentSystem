@@ -3,8 +3,8 @@
 package hook
 
 import (
+	"comment-main/app/comment-service/internal/data/ent"
 	"context"
-	"entcdemo/ent"
 	"fmt"
 )
 
@@ -18,6 +18,30 @@ func (f ReplyFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error
 		return f(ctx, mv)
 	}
 	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ReplyMutation", m)
+}
+
+// The ReplyAreaFunc type is an adapter to allow the use of ordinary
+// function as ReplyArea mutator.
+type ReplyAreaFunc func(context.Context, *ent.ReplyAreaMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ReplyAreaFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ReplyAreaMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ReplyAreaMutation", m)
+}
+
+// The ReplyIndexFunc type is an adapter to allow the use of ordinary
+// function as ReplyIndex mutator.
+type ReplyIndexFunc func(context.Context, *ent.ReplyIndexMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f ReplyIndexFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	if mv, ok := m.(*ent.ReplyIndexMutation); ok {
+		return f(ctx, mv)
+	}
+	return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.ReplyIndexMutation", m)
 }
 
 // Condition is a hook condition function.

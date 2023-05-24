@@ -3,55 +3,60 @@
 package reply
 
 import (
-	"entcdemo/ent/predicate"
+	"comment-main/app/comment-service/internal/data/ent/predicate"
 	"time"
 
 	"entgo.io/ent/dialect/sql"
 )
 
 // ID filters vertices based on their ID field.
-func ID(id int64) predicate.Reply {
+func ID(id int) predicate.Reply {
 	return predicate.Reply(sql.FieldEQ(FieldID, id))
 }
 
 // IDEQ applies the EQ predicate on the ID field.
-func IDEQ(id int64) predicate.Reply {
+func IDEQ(id int) predicate.Reply {
 	return predicate.Reply(sql.FieldEQ(FieldID, id))
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
-func IDNEQ(id int64) predicate.Reply {
+func IDNEQ(id int) predicate.Reply {
 	return predicate.Reply(sql.FieldNEQ(FieldID, id))
 }
 
 // IDIn applies the In predicate on the ID field.
-func IDIn(ids ...int64) predicate.Reply {
+func IDIn(ids ...int) predicate.Reply {
 	return predicate.Reply(sql.FieldIn(FieldID, ids...))
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
-func IDNotIn(ids ...int64) predicate.Reply {
+func IDNotIn(ids ...int) predicate.Reply {
 	return predicate.Reply(sql.FieldNotIn(FieldID, ids...))
 }
 
 // IDGT applies the GT predicate on the ID field.
-func IDGT(id int64) predicate.Reply {
+func IDGT(id int) predicate.Reply {
 	return predicate.Reply(sql.FieldGT(FieldID, id))
 }
 
 // IDGTE applies the GTE predicate on the ID field.
-func IDGTE(id int64) predicate.Reply {
+func IDGTE(id int) predicate.Reply {
 	return predicate.Reply(sql.FieldGTE(FieldID, id))
 }
 
 // IDLT applies the LT predicate on the ID field.
-func IDLT(id int64) predicate.Reply {
+func IDLT(id int) predicate.Reply {
 	return predicate.Reply(sql.FieldLT(FieldID, id))
 }
 
 // IDLTE applies the LTE predicate on the ID field.
-func IDLTE(id int64) predicate.Reply {
+func IDLTE(id int) predicate.Reply {
 	return predicate.Reply(sql.FieldLTE(FieldID, id))
+}
+
+// Rpid applies equality check predicate on the "rpid" field. It's identical to RpidEQ.
+func Rpid(v int64) predicate.Reply {
+	return predicate.Reply(sql.FieldEQ(FieldRpid, v))
 }
 
 // Message applies equality check predicate on the "message" field. It's identical to MessageEQ.
@@ -102,6 +107,46 @@ func Topics(v string) predicate.Reply {
 // Addr applies equality check predicate on the "addr" field. It's identical to AddrEQ.
 func Addr(v string) predicate.Reply {
 	return predicate.Reply(sql.FieldEQ(FieldAddr, v))
+}
+
+// RpidEQ applies the EQ predicate on the "rpid" field.
+func RpidEQ(v int64) predicate.Reply {
+	return predicate.Reply(sql.FieldEQ(FieldRpid, v))
+}
+
+// RpidNEQ applies the NEQ predicate on the "rpid" field.
+func RpidNEQ(v int64) predicate.Reply {
+	return predicate.Reply(sql.FieldNEQ(FieldRpid, v))
+}
+
+// RpidIn applies the In predicate on the "rpid" field.
+func RpidIn(vs ...int64) predicate.Reply {
+	return predicate.Reply(sql.FieldIn(FieldRpid, vs...))
+}
+
+// RpidNotIn applies the NotIn predicate on the "rpid" field.
+func RpidNotIn(vs ...int64) predicate.Reply {
+	return predicate.Reply(sql.FieldNotIn(FieldRpid, vs...))
+}
+
+// RpidGT applies the GT predicate on the "rpid" field.
+func RpidGT(v int64) predicate.Reply {
+	return predicate.Reply(sql.FieldGT(FieldRpid, v))
+}
+
+// RpidGTE applies the GTE predicate on the "rpid" field.
+func RpidGTE(v int64) predicate.Reply {
+	return predicate.Reply(sql.FieldGTE(FieldRpid, v))
+}
+
+// RpidLT applies the LT predicate on the "rpid" field.
+func RpidLT(v int64) predicate.Reply {
+	return predicate.Reply(sql.FieldLT(FieldRpid, v))
+}
+
+// RpidLTE applies the LTE predicate on the "rpid" field.
+func RpidLTE(v int64) predicate.Reply {
+	return predicate.Reply(sql.FieldLTE(FieldRpid, v))
 }
 
 // MessageEQ applies the EQ predicate on the "message" field.

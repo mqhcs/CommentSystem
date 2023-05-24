@@ -3,8 +3,8 @@
 package ent
 
 import (
+	"comment-main/app/comment-service/internal/data/ent/reply"
 	"context"
-	"entcdemo/ent/reply"
 	"errors"
 	"fmt"
 	"time"
@@ -18,6 +18,12 @@ type ReplyCreate struct {
 	config
 	mutation *ReplyMutation
 	hooks    []Hook
+}
+
+// SetRpid sets the "rpid" field.
+func (rc *ReplyCreate) SetRpid(i int64) *ReplyCreate {
+	rc.mutation.SetRpid(i)
+	return rc
 }
 
 // SetMessage sets the "message" field.
@@ -96,12 +102,6 @@ func (rc *ReplyCreate) SetAddr(s string) *ReplyCreate {
 	return rc
 }
 
-// SetID sets the "id" field.
-func (rc *ReplyCreate) SetID(i int64) *ReplyCreate {
-	rc.mutation.SetID(i)
-	return rc
-}
-
 // Mutation returns the ReplyMutation object of the builder.
 func (rc *ReplyCreate) Mutation() *ReplyMutation {
 	return rc.mutation
@@ -149,6 +149,9 @@ func (rc *ReplyCreate) defaults() {
 
 // check runs all checks and user-defined validators on the builder.
 func (rc *ReplyCreate) check() error {
+	if _, ok := rc.mutation.Rpid(); !ok {
+		return &ValidationError{Name: "rpid", err: errors.New(`ent: missing required field "Reply.rpid"`)}
+	}
 	if _, ok := rc.mutation.Message(); !ok {
 		return &ValidationError{Name: "message", err: errors.New(`ent: missing required field "Reply.message"`)}
 	}
@@ -193,10 +196,8 @@ func (rc *ReplyCreate) sqlSave(ctx context.Context) (*Reply, error) {
 		}
 		return nil, err
 	}
-	if _spec.ID.Value != _node.ID {
-		id := _spec.ID.Value.(int64)
-		_node.ID = int64(id)
-	}
+	id := _spec.ID.Value.(int64)
+	_node.ID = int(id)
 	rc.mutation.id = &_node.ID
 	rc.mutation.done = true
 	return _node, nil
@@ -205,11 +206,11 @@ func (rc *ReplyCreate) sqlSave(ctx context.Context) (*Reply, error) {
 func (rc *ReplyCreate) createSpec() (*Reply, *sqlgraph.CreateSpec) {
 	var (
 		_node = &Reply{config: rc.config}
-		_spec = sqlgraph.NewCreateSpec(reply.Table, sqlgraph.NewFieldSpec(reply.FieldID, field.TypeInt64))
+		_spec = sqlgraph.NewCreateSpec(reply.Table, sqlgraph.NewFieldSpec(reply.FieldID, field.TypeInt))
 	)
-	if id, ok := rc.mutation.ID(); ok {
-		_node.ID = id
-		_spec.ID.Value = id
+	if value, ok := rc.mutation.Rpid(); ok {
+		_spec.SetField(reply.FieldRpid, field.TypeInt64, value)
+		_node.Rpid = value
 	}
 	if value, ok := rc.mutation.Message(); ok {
 		_spec.SetField(reply.FieldMessage, field.TypeString, value)
@@ -295,9 +296,9 @@ func (rcb *ReplyCreateBulk) Save(ctx context.Context) ([]*Reply, error) {
 					return nil, err
 				}
 				mutation.id = &nodes[i].ID
-				if specs[i].ID.Value != nil && nodes[i].ID == 0 {
+				if specs[i].ID.Value != nil {
 					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int64(id)
+					nodes[i].ID = int(id)
 				}
 				mutation.done = true
 				return nodes[i], nil

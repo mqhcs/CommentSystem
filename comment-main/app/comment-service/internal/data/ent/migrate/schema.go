@@ -10,7 +10,8 @@ import (
 var (
 	// RepliesColumns holds the columns for the "replies" table.
 	RepliesColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "rpid", Type: field.TypeInt64},
 		{Name: "message", Type: field.TypeString},
 		{Name: "ats", Type: field.TypeString},
 		{Name: "ip", Type: field.TypeInt64},
@@ -28,9 +29,56 @@ var (
 		Columns:    RepliesColumns,
 		PrimaryKey: []*schema.Column{RepliesColumns[0]},
 	}
+	// ReplyAreasColumns holds the columns for the "reply_areas" table.
+	ReplyAreasColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "oid", Type: field.TypeInt64},
+		{Name: "type", Type: field.TypeInt8},
+		{Name: "mid", Type: field.TypeInt64},
+		{Name: "count", Type: field.TypeInt32},
+		{Name: "root_count", Type: field.TypeInt32},
+		{Name: "acount", Type: field.TypeInt32},
+		{Name: "state", Type: field.TypeInt8},
+		{Name: "ctime", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "mtime", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "attrs", Type: field.TypeInt32},
+		{Name: "meta", Type: field.TypeString},
+	}
+	// ReplyAreasTable holds the schema information for the "reply_areas" table.
+	ReplyAreasTable = &schema.Table{
+		Name:       "reply_areas",
+		Columns:    ReplyAreasColumns,
+		PrimaryKey: []*schema.Column{ReplyAreasColumns[0]},
+	}
+	// ReplyIndexesColumns holds the columns for the "reply_indexes" table.
+	ReplyIndexesColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "oid", Type: field.TypeInt64},
+		{Name: "type", Type: field.TypeInt8},
+		{Name: "mid", Type: field.TypeInt64},
+		{Name: "root", Type: field.TypeInt64},
+		{Name: "parent", Type: field.TypeInt64},
+		{Name: "count", Type: field.TypeInt32},
+		{Name: "rcount", Type: field.TypeInt32},
+		{Name: "acount", Type: field.TypeInt32},
+		{Name: "likes", Type: field.TypeInt32},
+		{Name: "hates", Type: field.TypeInt32},
+		{Name: "report_count", Type: field.TypeInt32},
+		{Name: "state", Type: field.TypeInt8},
+		{Name: "ctime", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+		{Name: "mtime", Type: field.TypeTime, SchemaType: map[string]string{"mysql": "datetime"}},
+	}
+	// ReplyIndexesTable holds the schema information for the "reply_indexes" table.
+	ReplyIndexesTable = &schema.Table{
+		Name:       "reply_indexes",
+		Columns:    ReplyIndexesColumns,
+		PrimaryKey: []*schema.Column{ReplyIndexesColumns[0]},
+	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
 		RepliesTable,
+		ReplyAreasTable,
+		ReplyIndexesTable,
 	}
 )
 

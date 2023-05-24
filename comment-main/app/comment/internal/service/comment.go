@@ -5,21 +5,18 @@ import (
 	"comment-main/app/comment/internal/biz"
 	"context"
 	"github.com/go-kratos/kratos/v2/log"
-	"github.com/google/wire"
 )
-
-var ProviderSet = wire.NewSet(NewCommentService())
 
 type CommentService struct {
 	pb.UnimplementedCommentServer
-	uc  *biz.UserUsecase
+	uc  *biz.CommentUsecase
 	log *log.Helper
 }
 
-func NewCommentService() *CommentService {
+func NewCommentService(uc *biz.CommentUsecase, logger log.Logger) *CommentService {
 	return &CommentService{
 		uc:  uc,
-		log: log.NewHelper(log.With(logger, "module", "service/comment")),
+		log: log.NewHelper(log.With(logger, "module", "comment")),
 	}
 }
 

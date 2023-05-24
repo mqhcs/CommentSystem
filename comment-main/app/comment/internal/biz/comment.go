@@ -5,15 +5,12 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-kratos/kratos/v2/log"
-	"order/internal/domain"
 )
 
-type CommentList struct {
-}
 
 type CommentRepo interface {
-	GetCommentList(ctx context.Context, aid int64, userId int64) (*domain.CommentList, error)
-	SendComment(ctx context.Context, aid int64, userId int64) (*domain.Comment, error)
+	DisplayCommentList(ctx context.Context, aid int64, userId int64) (*domain.CommentListDisplay, error)
+	SendComment(ctx context.Context, aid int64, userId int64) (*domain.SendCommentEntity, error)
 }
 
 type CommentUsecase struct {
@@ -31,11 +28,11 @@ func NewCommentUsecase(repo CommentRepo, serviceRPC serviceV1.CommentServiceClie
 	}
 }
 
-func (cc *CommentUsecase) CreateComment(ctx context.Context, comment *domain.Comment) {
+func (cc *CommentUsecase) SendComment(ctx context.Context, comment *domain.SendCommentEntity) {
 	// 跨服务查询信息
 	{
 		// 已选中，获取评论区信息
-		areaList, err := cc.serviceRPC.ListArea(ctx, &areaV1.ListAreaRequest{})
+		areaList, err := cc.serviceRPC.ListReplyArea(ctx, &serviceV1.ListReplyAreaRequest{})
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -50,16 +47,18 @@ func (cc *CommentUsecase) CreateComment(ctx context.Context, comment *domain.Com
 		//...
 		//允许发送
 		//跨服务发评论comment-service
-
+		cc.serviceRPC.CreateReply()
+		cc.serviceRPC.CreateReplyIndex()
+		cc.serviceRPC.CreateReplyArea()
 	}
 
 }
-func (cc *CommentUsecase) ShowCommentList(ctx context.Context, comment *domain.Comment) {
+func (cc *CommentUsecase) DisplayCommentList(ctx context.Context, comment *domain.CommentListDisplay) {
 	// 跨服务查询信息
 	{
 
 		// 已选中，根据OID，查询对应的评论区
-		areaList, err := cc.areaRPC.ListArea(ctx, &areaV1.ListAreaRequest{})
+		areaList, err := cc.serviceRPC.ListReplyArea(ctx, &serviceV1.ListReplyAreaRequest{})
 		if err != nil {
 			fmt.Println(err)
 		}

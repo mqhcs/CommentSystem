@@ -3,7 +3,7 @@
 package ent
 
 import (
-	"entcdemo/ent/reply"
+	"comment-main/app/comment-service/internal/data/ent/reply"
 	"fmt"
 	"strings"
 	"time"
@@ -16,7 +16,9 @@ import (
 type Reply struct {
 	config `json:"-"`
 	// ID of the ent.
-	ID int64 `json:"id,omitempty"`
+	ID int `json:"id,omitempty"`
+	// Rpid holds the value of the "rpid" field.
+	Rpid int64 `json:"rpid,omitempty"`
 	// Message holds the value of the "message" field.
 	Message string `json:"message,omitempty"`
 	// Ats holds the value of the "ats" field.
@@ -45,7 +47,7 @@ func (*Reply) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case reply.FieldID, reply.FieldIP, reply.FieldPlat:
+		case reply.FieldID, reply.FieldRpid, reply.FieldIP, reply.FieldPlat:
 			values[i] = new(sql.NullInt64)
 		case reply.FieldMessage, reply.FieldAts, reply.FieldDevice, reply.FieldVersion, reply.FieldTopics, reply.FieldAddr:
 			values[i] = new(sql.NullString)
@@ -71,7 +73,13 @@ func (r *Reply) assignValues(columns []string, values []any) error {
 			if !ok {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
-			r.ID = int64(value.Int64)
+			r.ID = int(value.Int64)
+		case reply.FieldRpid:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field rpid", values[i])
+			} else if value.Valid {
+				r.Rpid = value.Int64
+			}
 		case reply.FieldMessage:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field message", values[i])
@@ -168,6 +176,9 @@ func (r *Reply) String() string {
 	var builder strings.Builder
 	builder.WriteString("Reply(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", r.ID))
+	builder.WriteString("rpid=")
+	builder.WriteString(fmt.Sprintf("%v", r.Rpid))
+	builder.WriteString(", ")
 	builder.WriteString("message=")
 	builder.WriteString(r.Message)
 	builder.WriteString(", ")

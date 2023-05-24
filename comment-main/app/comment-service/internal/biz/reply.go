@@ -8,17 +8,17 @@ import (
 )
 
 type Reply struct {
-	ID        int64
-	Message   string
-	Ats       string
-	IP        int64
-	Plat      int8
-	Device    string
-	Version   string
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Topics    string
-	Addr      string
+	ID      int64
+	Message string
+	Ats     string
+	IP      int64
+	Plat    int8
+	Device  string
+	Version string
+	Ctime   time.Time
+	Mtime   time.Time
+	Topics  string
+	Addr    string
 }
 
 type ReplyRepo interface {

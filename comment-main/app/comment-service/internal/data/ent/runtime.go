@@ -3,8 +3,10 @@
 package ent
 
 import (
-	"entcdemo/ent/reply"
-	"entcdemo/ent/schema"
+	"comment-main/app/comment-service/internal/data/ent/reply"
+	"comment-main/app/comment-service/internal/data/ent/replyarea"
+	"comment-main/app/comment-service/internal/data/ent/replyindex"
+	"comment-main/app/comment-service/internal/data/ent/schema"
 	"time"
 )
 
@@ -22,4 +24,24 @@ func init() {
 	replyDescMtime := replyFields[8].Descriptor()
 	// reply.DefaultMtime holds the default value on creation for the mtime field.
 	reply.DefaultMtime = replyDescMtime.Default.(func() time.Time)
+	replyareaFields := schema.ReplyArea{}.Fields()
+	_ = replyareaFields
+	// replyareaDescCtime is the schema descriptor for ctime field.
+	replyareaDescCtime := replyareaFields[8].Descriptor()
+	// replyarea.DefaultCtime holds the default value on creation for the ctime field.
+	replyarea.DefaultCtime = replyareaDescCtime.Default.(func() time.Time)
+	// replyareaDescMtime is the schema descriptor for mtime field.
+	replyareaDescMtime := replyareaFields[9].Descriptor()
+	// replyarea.DefaultMtime holds the default value on creation for the mtime field.
+	replyarea.DefaultMtime = replyareaDescMtime.Default.(func() time.Time)
+	replyindexFields := schema.ReplyIndex{}.Fields()
+	_ = replyindexFields
+	// replyindexDescCtime is the schema descriptor for ctime field.
+	replyindexDescCtime := replyindexFields[13].Descriptor()
+	// replyindex.DefaultCtime holds the default value on creation for the ctime field.
+	replyindex.DefaultCtime = replyindexDescCtime.Default.(func() time.Time)
+	// replyindexDescMtime is the schema descriptor for mtime field.
+	replyindexDescMtime := replyindexFields[14].Descriptor()
+	// replyindex.DefaultMtime holds the default value on creation for the mtime field.
+	replyindex.DefaultMtime = replyindexDescMtime.Default.(func() time.Time)
 }

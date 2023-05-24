@@ -14,6 +14,10 @@ type Tx struct {
 	config
 	// Reply is the client for interacting with the Reply builders.
 	Reply *ReplyClient
+	// ReplyArea is the client for interacting with the ReplyArea builders.
+	ReplyArea *ReplyAreaClient
+	// ReplyIndex is the client for interacting with the ReplyIndex builders.
+	ReplyIndex *ReplyIndexClient
 
 	// lazily loaded.
 	client     *Client
@@ -146,6 +150,8 @@ func (tx *Tx) Client() *Client {
 
 func (tx *Tx) init() {
 	tx.Reply = NewReplyClient(tx.config)
+	tx.ReplyArea = NewReplyAreaClient(tx.config)
+	tx.ReplyIndex = NewReplyIndexClient(tx.config)
 }
 
 // txDriver wraps the given dialect.Tx with a nop dialect.Driver implementation.

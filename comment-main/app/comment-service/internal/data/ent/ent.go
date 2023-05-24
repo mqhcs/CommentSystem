@@ -3,8 +3,10 @@
 package ent
 
 import (
+	"comment-main/app/comment-service/internal/data/ent/reply"
+	"comment-main/app/comment-service/internal/data/ent/replyarea"
+	"comment-main/app/comment-service/internal/data/ent/replyindex"
 	"context"
-	"entcdemo/ent/reply"
 	"errors"
 	"fmt"
 	"reflect"
@@ -73,7 +75,9 @@ var (
 func checkColumn(table, column string) error {
 	initCheck.Do(func() {
 		columnCheck = sql.NewColumnCheck(map[string]func(string) bool{
-			reply.Table: reply.ValidColumn,
+			reply.Table:      reply.ValidColumn,
+			replyarea.Table:  replyarea.ValidColumn,
+			replyindex.Table: replyindex.ValidColumn,
 		})
 	})
 	return columnCheck(table, column)

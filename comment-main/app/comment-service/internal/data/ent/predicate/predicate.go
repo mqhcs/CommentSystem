@@ -8,3 +8,9 @@ import (
 
 // Reply is the predicate function for reply builders.
 type Reply func(*sql.Selector)
+
+// ReplyArea is the predicate function for replyarea builders.
+type ReplyArea func(*sql.Selector)
+
+// ReplyIndex is the predicate function for replyindex builders.
+type ReplyIndex func(*sql.Selector)

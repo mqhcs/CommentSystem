@@ -13,6 +13,8 @@ const (
 	Label = "reply"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldRpid holds the string denoting the rpid field in the database.
+	FieldRpid = "rpid"
 	// FieldMessage holds the string denoting the message field in the database.
 	FieldMessage = "message"
 	// FieldAts holds the string denoting the ats field in the database.
@@ -40,6 +42,7 @@ const (
 // Columns holds all SQL columns for reply fields.
 var Columns = []string{
 	FieldID,
+	FieldRpid,
 	FieldMessage,
 	FieldAts,
 	FieldIP,
@@ -75,6 +78,11 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByRpid orders the results by the rpid field.
+func ByRpid(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldRpid, opts...).ToFunc()
 }
 
 // ByMessage orders the results by the message field.

@@ -6,33 +6,82 @@ option go_package = "comment-main/api/commentService/v1;v1";
 option java_multiple_files = true;
 option java_package = "api.commentService.v1";
 
-import "google/api/annotations.proto";
+//import "google/api/annotations.proto";
 
 service CommentService {
-	rpc CreateCommentService (CreateCommentServiceRequest) returns (CreateCommentServiceReply){
+	//评论内容
+	rpc CreateReply (CreateReplyRequest) returns (CreateReplyReply){
 
 	};
-	rpc UpdateCommentService (UpdateCommentServiceRequest) returns (UpdateCommentServiceReply);
-	rpc DeleteCommentService (DeleteCommentServiceRequest) returns (DeleteCommentServiceReply);
-	rpc GetCommentService (GetCommentServiceRequest) returns (GetCommentServiceReply);
-	rpc ListCommentService (ListCommentServiceRequest) returns (ListCommentServiceReply);
+	rpc UpdateReply (UpdateReplyRequest) returns (UpdateReplyReply);
+	rpc DeleteReply (DeleteReplyRequest) returns (DeleteReplyReply);
+	rpc GetReply (GetReplyRequest) returns (GetReplyReply);
+	rpc ListReply (ListReplyRequest) returns (ListReplyReply);
+	//评论索引
+	rpc CreateReplyIndex (CreateReplyIndexRequest) returns (CreateReplyIndexReply){
+
+	};
+	rpc UpdateReplyIndex (UpdateReplyIndexRequest) returns (UpdateReplyIndexReply);
+	rpc DeleteReplyIndex (DeleteReplyIndexRequest) returns (DeleteReplyIndexReply);
+	rpc GetReplyIndex (GetReplyIndexRequest) returns (GetReplyIndexReply);
+	rpc ListReplyIndex (ListReplyIndexRequest) returns (ListReplyIndexReply);
+	//评论区
+	rpc CreateReplyArea (CreateReplyIndexRequest) returns (CreateReplyAreaReply){
+
+	};
+	rpc UpdateReplyArea (UpdateReplyAreaRequest) returns (UpdateReplyAreaReply);
+	rpc DeleteReplyArea (DeleteReplyAreaRequest) returns (DeleteReplyAreaReply);
+	rpc GetReplyArea (GetReplyAreaRequest) returns (GetReplyAreaReply);
+	rpc ListReplyArea (ListReplyAreaRequest) returns (ListReplyAreaReply);
 }
 
-message CreateCommentServiceRequest {}
-message CreateCommentServiceReply {}
 
-message UpdateCommentServiceRequest {}
-message UpdateCommentServiceReply {}
+message CreateReplyRequest {
 
-message DeleteCommentServiceRequest {}
-message DeleteCommentServiceReply {}
-
-message GetCommentServiceRequest {}
-message GetCommentServiceReply {}
-
-message ListCommentServiceRequest {
-	string identity = 1;
 }
-message ListCommentServiceReply {
-	repeated Reply Reply = 1;
-}
+message CreateReplyReply {}
+
+message UpdateReplyRequest {}
+message UpdateReplyReply {}
+
+message DeleteReplyRequest {}
+message DeleteReplyReply {}
+
+message GetReplyRequest {}
+message GetReplyReply {}
+
+message ListReplyRequest {}
+message ListReplyReply {}
+
+
+message CreateReplyIndexRequest {}
+message CreateReplyIndexReply {}
+
+message UpdateReplyIndexRequest {}
+message UpdateReplyIndexReply {}
+
+message DeleteReplyIndexRequest {}
+message DeleteReplyIndexReply {}
+
+message GetReplyIndexRequest {}
+message GetReplyIndexReply {}
+
+message ListReplyIndexRequest {}
+message ListReplyIndexReply {}
+
+
+
+message CreateReplyAreaRequest {}
+message CreateReplyAreaReply {}
+
+message UpdateReplyAreaRequest {}
+message UpdateReplyAreaReply {}
+
+message GetReplyAreaRequest {}
+message GetReplyAreaReply {}
+
+message DeleteReplyAreaRequest {}
+message DeleteReplyAreaReply {}
+
+message ListReplyAreaRequest {}
+message ListReplyAreaReply {}

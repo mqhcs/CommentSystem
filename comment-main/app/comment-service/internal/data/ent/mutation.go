@@ -3,9 +3,11 @@
 package ent
 
 import (
+	"comment-main/app/comment-service/internal/data/ent/predicate"
+	"comment-main/app/comment-service/internal/data/ent/reply"
+	"comment-main/app/comment-service/internal/data/ent/replyarea"
+	"comment-main/app/comment-service/internal/data/ent/replyindex"
 	"context"
-	"entcdemo/ent/predicate"
-	"entcdemo/ent/reply"
 	"errors"
 	"fmt"
 	"sync"
@@ -24,7 +26,9 @@ const (
 	OpUpdateOne = ent.OpUpdateOne
 
 	// Node types.
-	TypeReply = "Reply"
+	TypeReply      = "Reply"
+	TypeReplyArea  = "ReplyArea"
+	TypeReplyIndex = "ReplyIndex"
 )
 
 // ReplyMutation represents an operation that mutates the Reply nodes in the graph.
@@ -32,7 +36,9 @@ type ReplyMutation struct {
 	config
 	op            Op
 	typ           string
-	id            *int64
+	id            *int
+	rpid          *int64
+	addrpid       *int64
 	message       *string
 	ats           *string
 	ip            *int64
@@ -71,7 +77,7 @@ func newReplyMutation(c config, op Op, opts ...replyOption) *ReplyMutation {
 }
 
 // withReplyID sets the ID field of the mutation.
-func withReplyID(id int64) replyOption {
+func withReplyID(id int) replyOption {
 	return func(m *ReplyMutation) {
 		var (
 			err   error
@@ -121,15 +127,9 @@ func (m ReplyMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
-// SetID sets the value of the id field. Note that this
-// operation is only accepted on creation of Reply entities.
-func (m *ReplyMutation) SetID(id int64) {
-	m.id = &id
-}
-
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *ReplyMutation) ID() (id int64, exists bool) {
+func (m *ReplyMutation) ID() (id int, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -140,12 +140,12 @@ func (m *ReplyMutation) ID() (id int64, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *ReplyMutation) IDs(ctx context.Context) ([]int64, error) {
+func (m *ReplyMutation) IDs(ctx context.Context) ([]int, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int64{id}, nil
+			return []int{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -153,6 +153,62 @@ func (m *ReplyMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetRpid sets the "rpid" field.
+func (m *ReplyMutation) SetRpid(i int64) {
+	m.rpid = &i
+	m.addrpid = nil
+}
+
+// Rpid returns the value of the "rpid" field in the mutation.
+func (m *ReplyMutation) Rpid() (r int64, exists bool) {
+	v := m.rpid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRpid returns the old "rpid" field's value of the Reply entity.
+// If the Reply object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyMutation) OldRpid(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRpid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRpid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRpid: %w", err)
+	}
+	return oldValue.Rpid, nil
+}
+
+// AddRpid adds i to the "rpid" field.
+func (m *ReplyMutation) AddRpid(i int64) {
+	if m.addrpid != nil {
+		*m.addrpid += i
+	} else {
+		m.addrpid = &i
+	}
+}
+
+// AddedRpid returns the value that was added to the "rpid" field in this mutation.
+func (m *ReplyMutation) AddedRpid() (r int64, exists bool) {
+	v := m.addrpid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRpid resets all changes to the "rpid" field.
+func (m *ReplyMutation) ResetRpid() {
+	m.rpid = nil
+	m.addrpid = nil
 }
 
 // SetMessage sets the "message" field.
@@ -589,7 +645,10 @@ func (m *ReplyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *ReplyMutation) Fields() []string {
-	fields := make([]string, 0, 10)
+	fields := make([]string, 0, 11)
+	if m.rpid != nil {
+		fields = append(fields, reply.FieldRpid)
+	}
 	if m.message != nil {
 		fields = append(fields, reply.FieldMessage)
 	}
@@ -628,6 +687,8 @@ func (m *ReplyMutation) Fields() []string {
 // schema.
 func (m *ReplyMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case reply.FieldRpid:
+		return m.Rpid()
 	case reply.FieldMessage:
 		return m.Message()
 	case reply.FieldAts:
@@ -657,6 +718,8 @@ func (m *ReplyMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *ReplyMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case reply.FieldRpid:
+		return m.OldRpid(ctx)
 	case reply.FieldMessage:
 		return m.OldMessage(ctx)
 	case reply.FieldAts:
@@ -686,6 +749,13 @@ func (m *ReplyMutation) OldField(ctx context.Context, name string) (ent.Value, e
 // type.
 func (m *ReplyMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case reply.FieldRpid:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRpid(v)
+		return nil
 	case reply.FieldMessage:
 		v, ok := value.(string)
 		if !ok {
@@ -764,6 +834,9 @@ func (m *ReplyMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *ReplyMutation) AddedFields() []string {
 	var fields []string
+	if m.addrpid != nil {
+		fields = append(fields, reply.FieldRpid)
+	}
 	if m.addip != nil {
 		fields = append(fields, reply.FieldIP)
 	}
@@ -778,6 +851,8 @@ func (m *ReplyMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *ReplyMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case reply.FieldRpid:
+		return m.AddedRpid()
 	case reply.FieldIP:
 		return m.AddedIP()
 	case reply.FieldPlat:
@@ -791,6 +866,13 @@ func (m *ReplyMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *ReplyMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case reply.FieldRpid:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRpid(v)
+		return nil
 	case reply.FieldIP:
 		v, ok := value.(int64)
 		if !ok {
@@ -832,6 +914,9 @@ func (m *ReplyMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *ReplyMutation) ResetField(name string) error {
 	switch name {
+	case reply.FieldRpid:
+		m.ResetRpid()
+		return nil
 	case reply.FieldMessage:
 		m.ResetMessage()
 		return nil
@@ -912,4 +997,2576 @@ func (m *ReplyMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *ReplyMutation) ResetEdge(name string) error {
 	return fmt.Errorf("unknown Reply edge %s", name)
+}
+
+// ReplyAreaMutation represents an operation that mutates the ReplyArea nodes in the graph.
+type ReplyAreaMutation struct {
+	config
+	op            Op
+	typ           string
+	id            *int64
+	oid           *int64
+	addoid        *int64
+	_type         *int8
+	add_type      *int8
+	mid           *int64
+	addmid        *int64
+	count         *int32
+	addcount      *int32
+	root_count    *int32
+	addroot_count *int32
+	acount        *int32
+	addacount     *int32
+	state         *int8
+	addstate      *int8
+	ctime         *time.Time
+	mtime         *time.Time
+	attrs         *int32
+	addattrs      *int32
+	meta          *string
+	clearedFields map[string]struct{}
+	done          bool
+	oldValue      func(context.Context) (*ReplyArea, error)
+	predicates    []predicate.ReplyArea
+}
+
+var _ ent.Mutation = (*ReplyAreaMutation)(nil)
+
+// replyareaOption allows management of the mutation configuration using functional options.
+type replyareaOption func(*ReplyAreaMutation)
+
+// newReplyAreaMutation creates new mutation for the ReplyArea entity.
+func newReplyAreaMutation(c config, op Op, opts ...replyareaOption) *ReplyAreaMutation {
+	m := &ReplyAreaMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeReplyArea,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withReplyAreaID sets the ID field of the mutation.
+func withReplyAreaID(id int64) replyareaOption {
+	return func(m *ReplyAreaMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ReplyArea
+		)
+		m.oldValue = func(ctx context.Context) (*ReplyArea, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ReplyArea.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withReplyArea sets the old ReplyArea of the mutation.
+func withReplyArea(node *ReplyArea) replyareaOption {
+	return func(m *ReplyAreaMutation) {
+		m.oldValue = func(context.Context) (*ReplyArea, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ReplyAreaMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ReplyAreaMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ReplyArea entities.
+func (m *ReplyAreaMutation) SetID(id int64) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ReplyAreaMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ReplyAreaMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ReplyArea.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetOid sets the "oid" field.
+func (m *ReplyAreaMutation) SetOid(i int64) {
+	m.oid = &i
+	m.addoid = nil
+}
+
+// Oid returns the value of the "oid" field in the mutation.
+func (m *ReplyAreaMutation) Oid() (r int64, exists bool) {
+	v := m.oid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOid returns the old "oid" field's value of the ReplyArea entity.
+// If the ReplyArea object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyAreaMutation) OldOid(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOid: %w", err)
+	}
+	return oldValue.Oid, nil
+}
+
+// AddOid adds i to the "oid" field.
+func (m *ReplyAreaMutation) AddOid(i int64) {
+	if m.addoid != nil {
+		*m.addoid += i
+	} else {
+		m.addoid = &i
+	}
+}
+
+// AddedOid returns the value that was added to the "oid" field in this mutation.
+func (m *ReplyAreaMutation) AddedOid() (r int64, exists bool) {
+	v := m.addoid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetOid resets all changes to the "oid" field.
+func (m *ReplyAreaMutation) ResetOid() {
+	m.oid = nil
+	m.addoid = nil
+}
+
+// SetType sets the "type" field.
+func (m *ReplyAreaMutation) SetType(i int8) {
+	m._type = &i
+	m.add_type = nil
+}
+
+// GetType returns the value of the "type" field in the mutation.
+func (m *ReplyAreaMutation) GetType() (r int8, exists bool) {
+	v := m._type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldType returns the old "type" field's value of the ReplyArea entity.
+// If the ReplyArea object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyAreaMutation) OldType(ctx context.Context) (v int8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldType: %w", err)
+	}
+	return oldValue.Type, nil
+}
+
+// AddType adds i to the "type" field.
+func (m *ReplyAreaMutation) AddType(i int8) {
+	if m.add_type != nil {
+		*m.add_type += i
+	} else {
+		m.add_type = &i
+	}
+}
+
+// AddedType returns the value that was added to the "type" field in this mutation.
+func (m *ReplyAreaMutation) AddedType() (r int8, exists bool) {
+	v := m.add_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetType resets all changes to the "type" field.
+func (m *ReplyAreaMutation) ResetType() {
+	m._type = nil
+	m.add_type = nil
+}
+
+// SetMid sets the "mid" field.
+func (m *ReplyAreaMutation) SetMid(i int64) {
+	m.mid = &i
+	m.addmid = nil
+}
+
+// Mid returns the value of the "mid" field in the mutation.
+func (m *ReplyAreaMutation) Mid() (r int64, exists bool) {
+	v := m.mid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMid returns the old "mid" field's value of the ReplyArea entity.
+// If the ReplyArea object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyAreaMutation) OldMid(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMid: %w", err)
+	}
+	return oldValue.Mid, nil
+}
+
+// AddMid adds i to the "mid" field.
+func (m *ReplyAreaMutation) AddMid(i int64) {
+	if m.addmid != nil {
+		*m.addmid += i
+	} else {
+		m.addmid = &i
+	}
+}
+
+// AddedMid returns the value that was added to the "mid" field in this mutation.
+func (m *ReplyAreaMutation) AddedMid() (r int64, exists bool) {
+	v := m.addmid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMid resets all changes to the "mid" field.
+func (m *ReplyAreaMutation) ResetMid() {
+	m.mid = nil
+	m.addmid = nil
+}
+
+// SetCount sets the "count" field.
+func (m *ReplyAreaMutation) SetCount(i int32) {
+	m.count = &i
+	m.addcount = nil
+}
+
+// Count returns the value of the "count" field in the mutation.
+func (m *ReplyAreaMutation) Count() (r int32, exists bool) {
+	v := m.count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCount returns the old "count" field's value of the ReplyArea entity.
+// If the ReplyArea object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyAreaMutation) OldCount(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCount: %w", err)
+	}
+	return oldValue.Count, nil
+}
+
+// AddCount adds i to the "count" field.
+func (m *ReplyAreaMutation) AddCount(i int32) {
+	if m.addcount != nil {
+		*m.addcount += i
+	} else {
+		m.addcount = &i
+	}
+}
+
+// AddedCount returns the value that was added to the "count" field in this mutation.
+func (m *ReplyAreaMutation) AddedCount() (r int32, exists bool) {
+	v := m.addcount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCount resets all changes to the "count" field.
+func (m *ReplyAreaMutation) ResetCount() {
+	m.count = nil
+	m.addcount = nil
+}
+
+// SetRootCount sets the "root_count" field.
+func (m *ReplyAreaMutation) SetRootCount(i int32) {
+	m.root_count = &i
+	m.addroot_count = nil
+}
+
+// RootCount returns the value of the "root_count" field in the mutation.
+func (m *ReplyAreaMutation) RootCount() (r int32, exists bool) {
+	v := m.root_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRootCount returns the old "root_count" field's value of the ReplyArea entity.
+// If the ReplyArea object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyAreaMutation) OldRootCount(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRootCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRootCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRootCount: %w", err)
+	}
+	return oldValue.RootCount, nil
+}
+
+// AddRootCount adds i to the "root_count" field.
+func (m *ReplyAreaMutation) AddRootCount(i int32) {
+	if m.addroot_count != nil {
+		*m.addroot_count += i
+	} else {
+		m.addroot_count = &i
+	}
+}
+
+// AddedRootCount returns the value that was added to the "root_count" field in this mutation.
+func (m *ReplyAreaMutation) AddedRootCount() (r int32, exists bool) {
+	v := m.addroot_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRootCount resets all changes to the "root_count" field.
+func (m *ReplyAreaMutation) ResetRootCount() {
+	m.root_count = nil
+	m.addroot_count = nil
+}
+
+// SetAcount sets the "acount" field.
+func (m *ReplyAreaMutation) SetAcount(i int32) {
+	m.acount = &i
+	m.addacount = nil
+}
+
+// Acount returns the value of the "acount" field in the mutation.
+func (m *ReplyAreaMutation) Acount() (r int32, exists bool) {
+	v := m.acount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAcount returns the old "acount" field's value of the ReplyArea entity.
+// If the ReplyArea object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyAreaMutation) OldAcount(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAcount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAcount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAcount: %w", err)
+	}
+	return oldValue.Acount, nil
+}
+
+// AddAcount adds i to the "acount" field.
+func (m *ReplyAreaMutation) AddAcount(i int32) {
+	if m.addacount != nil {
+		*m.addacount += i
+	} else {
+		m.addacount = &i
+	}
+}
+
+// AddedAcount returns the value that was added to the "acount" field in this mutation.
+func (m *ReplyAreaMutation) AddedAcount() (r int32, exists bool) {
+	v := m.addacount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAcount resets all changes to the "acount" field.
+func (m *ReplyAreaMutation) ResetAcount() {
+	m.acount = nil
+	m.addacount = nil
+}
+
+// SetState sets the "state" field.
+func (m *ReplyAreaMutation) SetState(i int8) {
+	m.state = &i
+	m.addstate = nil
+}
+
+// State returns the value of the "state" field in the mutation.
+func (m *ReplyAreaMutation) State() (r int8, exists bool) {
+	v := m.state
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldState returns the old "state" field's value of the ReplyArea entity.
+// If the ReplyArea object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyAreaMutation) OldState(ctx context.Context) (v int8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldState is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldState requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldState: %w", err)
+	}
+	return oldValue.State, nil
+}
+
+// AddState adds i to the "state" field.
+func (m *ReplyAreaMutation) AddState(i int8) {
+	if m.addstate != nil {
+		*m.addstate += i
+	} else {
+		m.addstate = &i
+	}
+}
+
+// AddedState returns the value that was added to the "state" field in this mutation.
+func (m *ReplyAreaMutation) AddedState() (r int8, exists bool) {
+	v := m.addstate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetState resets all changes to the "state" field.
+func (m *ReplyAreaMutation) ResetState() {
+	m.state = nil
+	m.addstate = nil
+}
+
+// SetCtime sets the "ctime" field.
+func (m *ReplyAreaMutation) SetCtime(t time.Time) {
+	m.ctime = &t
+}
+
+// Ctime returns the value of the "ctime" field in the mutation.
+func (m *ReplyAreaMutation) Ctime() (r time.Time, exists bool) {
+	v := m.ctime
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCtime returns the old "ctime" field's value of the ReplyArea entity.
+// If the ReplyArea object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyAreaMutation) OldCtime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCtime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCtime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCtime: %w", err)
+	}
+	return oldValue.Ctime, nil
+}
+
+// ResetCtime resets all changes to the "ctime" field.
+func (m *ReplyAreaMutation) ResetCtime() {
+	m.ctime = nil
+}
+
+// SetMtime sets the "mtime" field.
+func (m *ReplyAreaMutation) SetMtime(t time.Time) {
+	m.mtime = &t
+}
+
+// Mtime returns the value of the "mtime" field in the mutation.
+func (m *ReplyAreaMutation) Mtime() (r time.Time, exists bool) {
+	v := m.mtime
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMtime returns the old "mtime" field's value of the ReplyArea entity.
+// If the ReplyArea object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyAreaMutation) OldMtime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMtime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMtime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMtime: %w", err)
+	}
+	return oldValue.Mtime, nil
+}
+
+// ResetMtime resets all changes to the "mtime" field.
+func (m *ReplyAreaMutation) ResetMtime() {
+	m.mtime = nil
+}
+
+// SetAttrs sets the "attrs" field.
+func (m *ReplyAreaMutation) SetAttrs(i int32) {
+	m.attrs = &i
+	m.addattrs = nil
+}
+
+// Attrs returns the value of the "attrs" field in the mutation.
+func (m *ReplyAreaMutation) Attrs() (r int32, exists bool) {
+	v := m.attrs
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAttrs returns the old "attrs" field's value of the ReplyArea entity.
+// If the ReplyArea object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyAreaMutation) OldAttrs(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAttrs is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAttrs requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAttrs: %w", err)
+	}
+	return oldValue.Attrs, nil
+}
+
+// AddAttrs adds i to the "attrs" field.
+func (m *ReplyAreaMutation) AddAttrs(i int32) {
+	if m.addattrs != nil {
+		*m.addattrs += i
+	} else {
+		m.addattrs = &i
+	}
+}
+
+// AddedAttrs returns the value that was added to the "attrs" field in this mutation.
+func (m *ReplyAreaMutation) AddedAttrs() (r int32, exists bool) {
+	v := m.addattrs
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAttrs resets all changes to the "attrs" field.
+func (m *ReplyAreaMutation) ResetAttrs() {
+	m.attrs = nil
+	m.addattrs = nil
+}
+
+// SetMeta sets the "meta" field.
+func (m *ReplyAreaMutation) SetMeta(s string) {
+	m.meta = &s
+}
+
+// Meta returns the value of the "meta" field in the mutation.
+func (m *ReplyAreaMutation) Meta() (r string, exists bool) {
+	v := m.meta
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMeta returns the old "meta" field's value of the ReplyArea entity.
+// If the ReplyArea object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyAreaMutation) OldMeta(ctx context.Context) (v string, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMeta is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMeta requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMeta: %w", err)
+	}
+	return oldValue.Meta, nil
+}
+
+// ResetMeta resets all changes to the "meta" field.
+func (m *ReplyAreaMutation) ResetMeta() {
+	m.meta = nil
+}
+
+// Where appends a list predicates to the ReplyAreaMutation builder.
+func (m *ReplyAreaMutation) Where(ps ...predicate.ReplyArea) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ReplyAreaMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ReplyAreaMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ReplyArea, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ReplyAreaMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ReplyAreaMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ReplyArea).
+func (m *ReplyAreaMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ReplyAreaMutation) Fields() []string {
+	fields := make([]string, 0, 11)
+	if m.oid != nil {
+		fields = append(fields, replyarea.FieldOid)
+	}
+	if m._type != nil {
+		fields = append(fields, replyarea.FieldType)
+	}
+	if m.mid != nil {
+		fields = append(fields, replyarea.FieldMid)
+	}
+	if m.count != nil {
+		fields = append(fields, replyarea.FieldCount)
+	}
+	if m.root_count != nil {
+		fields = append(fields, replyarea.FieldRootCount)
+	}
+	if m.acount != nil {
+		fields = append(fields, replyarea.FieldAcount)
+	}
+	if m.state != nil {
+		fields = append(fields, replyarea.FieldState)
+	}
+	if m.ctime != nil {
+		fields = append(fields, replyarea.FieldCtime)
+	}
+	if m.mtime != nil {
+		fields = append(fields, replyarea.FieldMtime)
+	}
+	if m.attrs != nil {
+		fields = append(fields, replyarea.FieldAttrs)
+	}
+	if m.meta != nil {
+		fields = append(fields, replyarea.FieldMeta)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ReplyAreaMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case replyarea.FieldOid:
+		return m.Oid()
+	case replyarea.FieldType:
+		return m.GetType()
+	case replyarea.FieldMid:
+		return m.Mid()
+	case replyarea.FieldCount:
+		return m.Count()
+	case replyarea.FieldRootCount:
+		return m.RootCount()
+	case replyarea.FieldAcount:
+		return m.Acount()
+	case replyarea.FieldState:
+		return m.State()
+	case replyarea.FieldCtime:
+		return m.Ctime()
+	case replyarea.FieldMtime:
+		return m.Mtime()
+	case replyarea.FieldAttrs:
+		return m.Attrs()
+	case replyarea.FieldMeta:
+		return m.Meta()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ReplyAreaMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case replyarea.FieldOid:
+		return m.OldOid(ctx)
+	case replyarea.FieldType:
+		return m.OldType(ctx)
+	case replyarea.FieldMid:
+		return m.OldMid(ctx)
+	case replyarea.FieldCount:
+		return m.OldCount(ctx)
+	case replyarea.FieldRootCount:
+		return m.OldRootCount(ctx)
+	case replyarea.FieldAcount:
+		return m.OldAcount(ctx)
+	case replyarea.FieldState:
+		return m.OldState(ctx)
+	case replyarea.FieldCtime:
+		return m.OldCtime(ctx)
+	case replyarea.FieldMtime:
+		return m.OldMtime(ctx)
+	case replyarea.FieldAttrs:
+		return m.OldAttrs(ctx)
+	case replyarea.FieldMeta:
+		return m.OldMeta(ctx)
+	}
+	return nil, fmt.Errorf("unknown ReplyArea field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReplyAreaMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case replyarea.FieldOid:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOid(v)
+		return nil
+	case replyarea.FieldType:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetType(v)
+		return nil
+	case replyarea.FieldMid:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMid(v)
+		return nil
+	case replyarea.FieldCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCount(v)
+		return nil
+	case replyarea.FieldRootCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRootCount(v)
+		return nil
+	case replyarea.FieldAcount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAcount(v)
+		return nil
+	case replyarea.FieldState:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetState(v)
+		return nil
+	case replyarea.FieldCtime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCtime(v)
+		return nil
+	case replyarea.FieldMtime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMtime(v)
+		return nil
+	case replyarea.FieldAttrs:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAttrs(v)
+		return nil
+	case replyarea.FieldMeta:
+		v, ok := value.(string)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMeta(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReplyArea field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ReplyAreaMutation) AddedFields() []string {
+	var fields []string
+	if m.addoid != nil {
+		fields = append(fields, replyarea.FieldOid)
+	}
+	if m.add_type != nil {
+		fields = append(fields, replyarea.FieldType)
+	}
+	if m.addmid != nil {
+		fields = append(fields, replyarea.FieldMid)
+	}
+	if m.addcount != nil {
+		fields = append(fields, replyarea.FieldCount)
+	}
+	if m.addroot_count != nil {
+		fields = append(fields, replyarea.FieldRootCount)
+	}
+	if m.addacount != nil {
+		fields = append(fields, replyarea.FieldAcount)
+	}
+	if m.addstate != nil {
+		fields = append(fields, replyarea.FieldState)
+	}
+	if m.addattrs != nil {
+		fields = append(fields, replyarea.FieldAttrs)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ReplyAreaMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case replyarea.FieldOid:
+		return m.AddedOid()
+	case replyarea.FieldType:
+		return m.AddedType()
+	case replyarea.FieldMid:
+		return m.AddedMid()
+	case replyarea.FieldCount:
+		return m.AddedCount()
+	case replyarea.FieldRootCount:
+		return m.AddedRootCount()
+	case replyarea.FieldAcount:
+		return m.AddedAcount()
+	case replyarea.FieldState:
+		return m.AddedState()
+	case replyarea.FieldAttrs:
+		return m.AddedAttrs()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReplyAreaMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case replyarea.FieldOid:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOid(v)
+		return nil
+	case replyarea.FieldType:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddType(v)
+		return nil
+	case replyarea.FieldMid:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMid(v)
+		return nil
+	case replyarea.FieldCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCount(v)
+		return nil
+	case replyarea.FieldRootCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRootCount(v)
+		return nil
+	case replyarea.FieldAcount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAcount(v)
+		return nil
+	case replyarea.FieldState:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddState(v)
+		return nil
+	case replyarea.FieldAttrs:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAttrs(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReplyArea numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ReplyAreaMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ReplyAreaMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ReplyAreaMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ReplyArea nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ReplyAreaMutation) ResetField(name string) error {
+	switch name {
+	case replyarea.FieldOid:
+		m.ResetOid()
+		return nil
+	case replyarea.FieldType:
+		m.ResetType()
+		return nil
+	case replyarea.FieldMid:
+		m.ResetMid()
+		return nil
+	case replyarea.FieldCount:
+		m.ResetCount()
+		return nil
+	case replyarea.FieldRootCount:
+		m.ResetRootCount()
+		return nil
+	case replyarea.FieldAcount:
+		m.ResetAcount()
+		return nil
+	case replyarea.FieldState:
+		m.ResetState()
+		return nil
+	case replyarea.FieldCtime:
+		m.ResetCtime()
+		return nil
+	case replyarea.FieldMtime:
+		m.ResetMtime()
+		return nil
+	case replyarea.FieldAttrs:
+		m.ResetAttrs()
+		return nil
+	case replyarea.FieldMeta:
+		m.ResetMeta()
+		return nil
+	}
+	return fmt.Errorf("unknown ReplyArea field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ReplyAreaMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ReplyAreaMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ReplyAreaMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ReplyAreaMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ReplyAreaMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ReplyAreaMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ReplyAreaMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ReplyArea unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ReplyAreaMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ReplyArea edge %s", name)
+}
+
+// ReplyIndexMutation represents an operation that mutates the ReplyIndex nodes in the graph.
+type ReplyIndexMutation struct {
+	config
+	op              Op
+	typ             string
+	id              *int64
+	oid             *int64
+	addoid          *int64
+	_type           *int8
+	add_type        *int8
+	mid             *int64
+	addmid          *int64
+	root            *int64
+	addroot         *int64
+	parent          *int64
+	addparent       *int64
+	count           *int32
+	addcount        *int32
+	rcount          *int32
+	addrcount       *int32
+	acount          *int32
+	addacount       *int32
+	likes           *int32
+	addlikes        *int32
+	hates           *int32
+	addhates        *int32
+	report_count    *int32
+	addreport_count *int32
+	state           *int8
+	addstate        *int8
+	ctime           *time.Time
+	mtime           *time.Time
+	clearedFields   map[string]struct{}
+	done            bool
+	oldValue        func(context.Context) (*ReplyIndex, error)
+	predicates      []predicate.ReplyIndex
+}
+
+var _ ent.Mutation = (*ReplyIndexMutation)(nil)
+
+// replyindexOption allows management of the mutation configuration using functional options.
+type replyindexOption func(*ReplyIndexMutation)
+
+// newReplyIndexMutation creates new mutation for the ReplyIndex entity.
+func newReplyIndexMutation(c config, op Op, opts ...replyindexOption) *ReplyIndexMutation {
+	m := &ReplyIndexMutation{
+		config:        c,
+		op:            op,
+		typ:           TypeReplyIndex,
+		clearedFields: make(map[string]struct{}),
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+	return m
+}
+
+// withReplyIndexID sets the ID field of the mutation.
+func withReplyIndexID(id int64) replyindexOption {
+	return func(m *ReplyIndexMutation) {
+		var (
+			err   error
+			once  sync.Once
+			value *ReplyIndex
+		)
+		m.oldValue = func(ctx context.Context) (*ReplyIndex, error) {
+			once.Do(func() {
+				if m.done {
+					err = errors.New("querying old values post mutation is not allowed")
+				} else {
+					value, err = m.Client().ReplyIndex.Get(ctx, id)
+				}
+			})
+			return value, err
+		}
+		m.id = &id
+	}
+}
+
+// withReplyIndex sets the old ReplyIndex of the mutation.
+func withReplyIndex(node *ReplyIndex) replyindexOption {
+	return func(m *ReplyIndexMutation) {
+		m.oldValue = func(context.Context) (*ReplyIndex, error) {
+			return node, nil
+		}
+		m.id = &node.ID
+	}
+}
+
+// Client returns a new `ent.Client` from the mutation. If the mutation was
+// executed in a transaction (ent.Tx), a transactional client is returned.
+func (m ReplyIndexMutation) Client() *Client {
+	client := &Client{config: m.config}
+	client.init()
+	return client
+}
+
+// Tx returns an `ent.Tx` for mutations that were executed in transactions;
+// it returns an error otherwise.
+func (m ReplyIndexMutation) Tx() (*Tx, error) {
+	if _, ok := m.driver.(*txDriver); !ok {
+		return nil, errors.New("ent: mutation is not running in a transaction")
+	}
+	tx := &Tx{config: m.config}
+	tx.init()
+	return tx, nil
+}
+
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of ReplyIndex entities.
+func (m *ReplyIndexMutation) SetID(id int64) {
+	m.id = &id
+}
+
+// ID returns the ID value in the mutation. Note that the ID is only available
+// if it was provided to the builder or after it was returned from the database.
+func (m *ReplyIndexMutation) ID() (id int64, exists bool) {
+	if m.id == nil {
+		return
+	}
+	return *m.id, true
+}
+
+// IDs queries the database and returns the entity ids that match the mutation's predicate.
+// That means, if the mutation is applied within a transaction with an isolation level such
+// as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
+// or updated by the mutation.
+func (m *ReplyIndexMutation) IDs(ctx context.Context) ([]int64, error) {
+	switch {
+	case m.op.Is(OpUpdateOne | OpDeleteOne):
+		id, exists := m.ID()
+		if exists {
+			return []int64{id}, nil
+		}
+		fallthrough
+	case m.op.Is(OpUpdate | OpDelete):
+		return m.Client().ReplyIndex.Query().Where(m.predicates...).IDs(ctx)
+	default:
+		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
+	}
+}
+
+// SetOid sets the "oid" field.
+func (m *ReplyIndexMutation) SetOid(i int64) {
+	m.oid = &i
+	m.addoid = nil
+}
+
+// Oid returns the value of the "oid" field in the mutation.
+func (m *ReplyIndexMutation) Oid() (r int64, exists bool) {
+	v := m.oid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldOid returns the old "oid" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldOid(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldOid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldOid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldOid: %w", err)
+	}
+	return oldValue.Oid, nil
+}
+
+// AddOid adds i to the "oid" field.
+func (m *ReplyIndexMutation) AddOid(i int64) {
+	if m.addoid != nil {
+		*m.addoid += i
+	} else {
+		m.addoid = &i
+	}
+}
+
+// AddedOid returns the value that was added to the "oid" field in this mutation.
+func (m *ReplyIndexMutation) AddedOid() (r int64, exists bool) {
+	v := m.addoid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetOid resets all changes to the "oid" field.
+func (m *ReplyIndexMutation) ResetOid() {
+	m.oid = nil
+	m.addoid = nil
+}
+
+// SetType sets the "type" field.
+func (m *ReplyIndexMutation) SetType(i int8) {
+	m._type = &i
+	m.add_type = nil
+}
+
+// GetType returns the value of the "type" field in the mutation.
+func (m *ReplyIndexMutation) GetType() (r int8, exists bool) {
+	v := m._type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldType returns the old "type" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldType(ctx context.Context) (v int8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldType is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldType requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldType: %w", err)
+	}
+	return oldValue.Type, nil
+}
+
+// AddType adds i to the "type" field.
+func (m *ReplyIndexMutation) AddType(i int8) {
+	if m.add_type != nil {
+		*m.add_type += i
+	} else {
+		m.add_type = &i
+	}
+}
+
+// AddedType returns the value that was added to the "type" field in this mutation.
+func (m *ReplyIndexMutation) AddedType() (r int8, exists bool) {
+	v := m.add_type
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetType resets all changes to the "type" field.
+func (m *ReplyIndexMutation) ResetType() {
+	m._type = nil
+	m.add_type = nil
+}
+
+// SetMid sets the "mid" field.
+func (m *ReplyIndexMutation) SetMid(i int64) {
+	m.mid = &i
+	m.addmid = nil
+}
+
+// Mid returns the value of the "mid" field in the mutation.
+func (m *ReplyIndexMutation) Mid() (r int64, exists bool) {
+	v := m.mid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMid returns the old "mid" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldMid(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMid is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMid requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMid: %w", err)
+	}
+	return oldValue.Mid, nil
+}
+
+// AddMid adds i to the "mid" field.
+func (m *ReplyIndexMutation) AddMid(i int64) {
+	if m.addmid != nil {
+		*m.addmid += i
+	} else {
+		m.addmid = &i
+	}
+}
+
+// AddedMid returns the value that was added to the "mid" field in this mutation.
+func (m *ReplyIndexMutation) AddedMid() (r int64, exists bool) {
+	v := m.addmid
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetMid resets all changes to the "mid" field.
+func (m *ReplyIndexMutation) ResetMid() {
+	m.mid = nil
+	m.addmid = nil
+}
+
+// SetRoot sets the "root" field.
+func (m *ReplyIndexMutation) SetRoot(i int64) {
+	m.root = &i
+	m.addroot = nil
+}
+
+// Root returns the value of the "root" field in the mutation.
+func (m *ReplyIndexMutation) Root() (r int64, exists bool) {
+	v := m.root
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRoot returns the old "root" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldRoot(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRoot is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRoot requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRoot: %w", err)
+	}
+	return oldValue.Root, nil
+}
+
+// AddRoot adds i to the "root" field.
+func (m *ReplyIndexMutation) AddRoot(i int64) {
+	if m.addroot != nil {
+		*m.addroot += i
+	} else {
+		m.addroot = &i
+	}
+}
+
+// AddedRoot returns the value that was added to the "root" field in this mutation.
+func (m *ReplyIndexMutation) AddedRoot() (r int64, exists bool) {
+	v := m.addroot
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRoot resets all changes to the "root" field.
+func (m *ReplyIndexMutation) ResetRoot() {
+	m.root = nil
+	m.addroot = nil
+}
+
+// SetParent sets the "parent" field.
+func (m *ReplyIndexMutation) SetParent(i int64) {
+	m.parent = &i
+	m.addparent = nil
+}
+
+// Parent returns the value of the "parent" field in the mutation.
+func (m *ReplyIndexMutation) Parent() (r int64, exists bool) {
+	v := m.parent
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldParent returns the old "parent" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldParent(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldParent is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldParent requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldParent: %w", err)
+	}
+	return oldValue.Parent, nil
+}
+
+// AddParent adds i to the "parent" field.
+func (m *ReplyIndexMutation) AddParent(i int64) {
+	if m.addparent != nil {
+		*m.addparent += i
+	} else {
+		m.addparent = &i
+	}
+}
+
+// AddedParent returns the value that was added to the "parent" field in this mutation.
+func (m *ReplyIndexMutation) AddedParent() (r int64, exists bool) {
+	v := m.addparent
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetParent resets all changes to the "parent" field.
+func (m *ReplyIndexMutation) ResetParent() {
+	m.parent = nil
+	m.addparent = nil
+}
+
+// SetCount sets the "count" field.
+func (m *ReplyIndexMutation) SetCount(i int32) {
+	m.count = &i
+	m.addcount = nil
+}
+
+// Count returns the value of the "count" field in the mutation.
+func (m *ReplyIndexMutation) Count() (r int32, exists bool) {
+	v := m.count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCount returns the old "count" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldCount(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCount: %w", err)
+	}
+	return oldValue.Count, nil
+}
+
+// AddCount adds i to the "count" field.
+func (m *ReplyIndexMutation) AddCount(i int32) {
+	if m.addcount != nil {
+		*m.addcount += i
+	} else {
+		m.addcount = &i
+	}
+}
+
+// AddedCount returns the value that was added to the "count" field in this mutation.
+func (m *ReplyIndexMutation) AddedCount() (r int32, exists bool) {
+	v := m.addcount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetCount resets all changes to the "count" field.
+func (m *ReplyIndexMutation) ResetCount() {
+	m.count = nil
+	m.addcount = nil
+}
+
+// SetRcount sets the "rcount" field.
+func (m *ReplyIndexMutation) SetRcount(i int32) {
+	m.rcount = &i
+	m.addrcount = nil
+}
+
+// Rcount returns the value of the "rcount" field in the mutation.
+func (m *ReplyIndexMutation) Rcount() (r int32, exists bool) {
+	v := m.rcount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldRcount returns the old "rcount" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldRcount(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldRcount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldRcount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldRcount: %w", err)
+	}
+	return oldValue.Rcount, nil
+}
+
+// AddRcount adds i to the "rcount" field.
+func (m *ReplyIndexMutation) AddRcount(i int32) {
+	if m.addrcount != nil {
+		*m.addrcount += i
+	} else {
+		m.addrcount = &i
+	}
+}
+
+// AddedRcount returns the value that was added to the "rcount" field in this mutation.
+func (m *ReplyIndexMutation) AddedRcount() (r int32, exists bool) {
+	v := m.addrcount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetRcount resets all changes to the "rcount" field.
+func (m *ReplyIndexMutation) ResetRcount() {
+	m.rcount = nil
+	m.addrcount = nil
+}
+
+// SetAcount sets the "acount" field.
+func (m *ReplyIndexMutation) SetAcount(i int32) {
+	m.acount = &i
+	m.addacount = nil
+}
+
+// Acount returns the value of the "acount" field in the mutation.
+func (m *ReplyIndexMutation) Acount() (r int32, exists bool) {
+	v := m.acount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldAcount returns the old "acount" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldAcount(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldAcount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldAcount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldAcount: %w", err)
+	}
+	return oldValue.Acount, nil
+}
+
+// AddAcount adds i to the "acount" field.
+func (m *ReplyIndexMutation) AddAcount(i int32) {
+	if m.addacount != nil {
+		*m.addacount += i
+	} else {
+		m.addacount = &i
+	}
+}
+
+// AddedAcount returns the value that was added to the "acount" field in this mutation.
+func (m *ReplyIndexMutation) AddedAcount() (r int32, exists bool) {
+	v := m.addacount
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetAcount resets all changes to the "acount" field.
+func (m *ReplyIndexMutation) ResetAcount() {
+	m.acount = nil
+	m.addacount = nil
+}
+
+// SetLikes sets the "likes" field.
+func (m *ReplyIndexMutation) SetLikes(i int32) {
+	m.likes = &i
+	m.addlikes = nil
+}
+
+// Likes returns the value of the "likes" field in the mutation.
+func (m *ReplyIndexMutation) Likes() (r int32, exists bool) {
+	v := m.likes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldLikes returns the old "likes" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldLikes(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldLikes is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldLikes requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldLikes: %w", err)
+	}
+	return oldValue.Likes, nil
+}
+
+// AddLikes adds i to the "likes" field.
+func (m *ReplyIndexMutation) AddLikes(i int32) {
+	if m.addlikes != nil {
+		*m.addlikes += i
+	} else {
+		m.addlikes = &i
+	}
+}
+
+// AddedLikes returns the value that was added to the "likes" field in this mutation.
+func (m *ReplyIndexMutation) AddedLikes() (r int32, exists bool) {
+	v := m.addlikes
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetLikes resets all changes to the "likes" field.
+func (m *ReplyIndexMutation) ResetLikes() {
+	m.likes = nil
+	m.addlikes = nil
+}
+
+// SetHates sets the "hates" field.
+func (m *ReplyIndexMutation) SetHates(i int32) {
+	m.hates = &i
+	m.addhates = nil
+}
+
+// Hates returns the value of the "hates" field in the mutation.
+func (m *ReplyIndexMutation) Hates() (r int32, exists bool) {
+	v := m.hates
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldHates returns the old "hates" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldHates(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldHates is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldHates requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldHates: %w", err)
+	}
+	return oldValue.Hates, nil
+}
+
+// AddHates adds i to the "hates" field.
+func (m *ReplyIndexMutation) AddHates(i int32) {
+	if m.addhates != nil {
+		*m.addhates += i
+	} else {
+		m.addhates = &i
+	}
+}
+
+// AddedHates returns the value that was added to the "hates" field in this mutation.
+func (m *ReplyIndexMutation) AddedHates() (r int32, exists bool) {
+	v := m.addhates
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetHates resets all changes to the "hates" field.
+func (m *ReplyIndexMutation) ResetHates() {
+	m.hates = nil
+	m.addhates = nil
+}
+
+// SetReportCount sets the "report_count" field.
+func (m *ReplyIndexMutation) SetReportCount(i int32) {
+	m.report_count = &i
+	m.addreport_count = nil
+}
+
+// ReportCount returns the value of the "report_count" field in the mutation.
+func (m *ReplyIndexMutation) ReportCount() (r int32, exists bool) {
+	v := m.report_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldReportCount returns the old "report_count" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldReportCount(ctx context.Context) (v int32, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldReportCount is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldReportCount requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldReportCount: %w", err)
+	}
+	return oldValue.ReportCount, nil
+}
+
+// AddReportCount adds i to the "report_count" field.
+func (m *ReplyIndexMutation) AddReportCount(i int32) {
+	if m.addreport_count != nil {
+		*m.addreport_count += i
+	} else {
+		m.addreport_count = &i
+	}
+}
+
+// AddedReportCount returns the value that was added to the "report_count" field in this mutation.
+func (m *ReplyIndexMutation) AddedReportCount() (r int32, exists bool) {
+	v := m.addreport_count
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetReportCount resets all changes to the "report_count" field.
+func (m *ReplyIndexMutation) ResetReportCount() {
+	m.report_count = nil
+	m.addreport_count = nil
+}
+
+// SetState sets the "state" field.
+func (m *ReplyIndexMutation) SetState(i int8) {
+	m.state = &i
+	m.addstate = nil
+}
+
+// State returns the value of the "state" field in the mutation.
+func (m *ReplyIndexMutation) State() (r int8, exists bool) {
+	v := m.state
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldState returns the old "state" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldState(ctx context.Context) (v int8, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldState is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldState requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldState: %w", err)
+	}
+	return oldValue.State, nil
+}
+
+// AddState adds i to the "state" field.
+func (m *ReplyIndexMutation) AddState(i int8) {
+	if m.addstate != nil {
+		*m.addstate += i
+	} else {
+		m.addstate = &i
+	}
+}
+
+// AddedState returns the value that was added to the "state" field in this mutation.
+func (m *ReplyIndexMutation) AddedState() (r int8, exists bool) {
+	v := m.addstate
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetState resets all changes to the "state" field.
+func (m *ReplyIndexMutation) ResetState() {
+	m.state = nil
+	m.addstate = nil
+}
+
+// SetCtime sets the "ctime" field.
+func (m *ReplyIndexMutation) SetCtime(t time.Time) {
+	m.ctime = &t
+}
+
+// Ctime returns the value of the "ctime" field in the mutation.
+func (m *ReplyIndexMutation) Ctime() (r time.Time, exists bool) {
+	v := m.ctime
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldCtime returns the old "ctime" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldCtime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldCtime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldCtime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldCtime: %w", err)
+	}
+	return oldValue.Ctime, nil
+}
+
+// ResetCtime resets all changes to the "ctime" field.
+func (m *ReplyIndexMutation) ResetCtime() {
+	m.ctime = nil
+}
+
+// SetMtime sets the "mtime" field.
+func (m *ReplyIndexMutation) SetMtime(t time.Time) {
+	m.mtime = &t
+}
+
+// Mtime returns the value of the "mtime" field in the mutation.
+func (m *ReplyIndexMutation) Mtime() (r time.Time, exists bool) {
+	v := m.mtime
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldMtime returns the old "mtime" field's value of the ReplyIndex entity.
+// If the ReplyIndex object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *ReplyIndexMutation) OldMtime(ctx context.Context) (v time.Time, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldMtime is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldMtime requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldMtime: %w", err)
+	}
+	return oldValue.Mtime, nil
+}
+
+// ResetMtime resets all changes to the "mtime" field.
+func (m *ReplyIndexMutation) ResetMtime() {
+	m.mtime = nil
+}
+
+// Where appends a list predicates to the ReplyIndexMutation builder.
+func (m *ReplyIndexMutation) Where(ps ...predicate.ReplyIndex) {
+	m.predicates = append(m.predicates, ps...)
+}
+
+// WhereP appends storage-level predicates to the ReplyIndexMutation builder. Using this method,
+// users can use type-assertion to append predicates that do not depend on any generated package.
+func (m *ReplyIndexMutation) WhereP(ps ...func(*sql.Selector)) {
+	p := make([]predicate.ReplyIndex, len(ps))
+	for i := range ps {
+		p[i] = ps[i]
+	}
+	m.Where(p...)
+}
+
+// Op returns the operation name.
+func (m *ReplyIndexMutation) Op() Op {
+	return m.op
+}
+
+// SetOp allows setting the mutation operation.
+func (m *ReplyIndexMutation) SetOp(op Op) {
+	m.op = op
+}
+
+// Type returns the node type of this mutation (ReplyIndex).
+func (m *ReplyIndexMutation) Type() string {
+	return m.typ
+}
+
+// Fields returns all fields that were changed during this mutation. Note that in
+// order to get all numeric fields that were incremented/decremented, call
+// AddedFields().
+func (m *ReplyIndexMutation) Fields() []string {
+	fields := make([]string, 0, 14)
+	if m.oid != nil {
+		fields = append(fields, replyindex.FieldOid)
+	}
+	if m._type != nil {
+		fields = append(fields, replyindex.FieldType)
+	}
+	if m.mid != nil {
+		fields = append(fields, replyindex.FieldMid)
+	}
+	if m.root != nil {
+		fields = append(fields, replyindex.FieldRoot)
+	}
+	if m.parent != nil {
+		fields = append(fields, replyindex.FieldParent)
+	}
+	if m.count != nil {
+		fields = append(fields, replyindex.FieldCount)
+	}
+	if m.rcount != nil {
+		fields = append(fields, replyindex.FieldRcount)
+	}
+	if m.acount != nil {
+		fields = append(fields, replyindex.FieldAcount)
+	}
+	if m.likes != nil {
+		fields = append(fields, replyindex.FieldLikes)
+	}
+	if m.hates != nil {
+		fields = append(fields, replyindex.FieldHates)
+	}
+	if m.report_count != nil {
+		fields = append(fields, replyindex.FieldReportCount)
+	}
+	if m.state != nil {
+		fields = append(fields, replyindex.FieldState)
+	}
+	if m.ctime != nil {
+		fields = append(fields, replyindex.FieldCtime)
+	}
+	if m.mtime != nil {
+		fields = append(fields, replyindex.FieldMtime)
+	}
+	return fields
+}
+
+// Field returns the value of a field with the given name. The second boolean
+// return value indicates that this field was not set, or was not defined in the
+// schema.
+func (m *ReplyIndexMutation) Field(name string) (ent.Value, bool) {
+	switch name {
+	case replyindex.FieldOid:
+		return m.Oid()
+	case replyindex.FieldType:
+		return m.GetType()
+	case replyindex.FieldMid:
+		return m.Mid()
+	case replyindex.FieldRoot:
+		return m.Root()
+	case replyindex.FieldParent:
+		return m.Parent()
+	case replyindex.FieldCount:
+		return m.Count()
+	case replyindex.FieldRcount:
+		return m.Rcount()
+	case replyindex.FieldAcount:
+		return m.Acount()
+	case replyindex.FieldLikes:
+		return m.Likes()
+	case replyindex.FieldHates:
+		return m.Hates()
+	case replyindex.FieldReportCount:
+		return m.ReportCount()
+	case replyindex.FieldState:
+		return m.State()
+	case replyindex.FieldCtime:
+		return m.Ctime()
+	case replyindex.FieldMtime:
+		return m.Mtime()
+	}
+	return nil, false
+}
+
+// OldField returns the old value of the field from the database. An error is
+// returned if the mutation operation is not UpdateOne, or the query to the
+// database failed.
+func (m *ReplyIndexMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
+	switch name {
+	case replyindex.FieldOid:
+		return m.OldOid(ctx)
+	case replyindex.FieldType:
+		return m.OldType(ctx)
+	case replyindex.FieldMid:
+		return m.OldMid(ctx)
+	case replyindex.FieldRoot:
+		return m.OldRoot(ctx)
+	case replyindex.FieldParent:
+		return m.OldParent(ctx)
+	case replyindex.FieldCount:
+		return m.OldCount(ctx)
+	case replyindex.FieldRcount:
+		return m.OldRcount(ctx)
+	case replyindex.FieldAcount:
+		return m.OldAcount(ctx)
+	case replyindex.FieldLikes:
+		return m.OldLikes(ctx)
+	case replyindex.FieldHates:
+		return m.OldHates(ctx)
+	case replyindex.FieldReportCount:
+		return m.OldReportCount(ctx)
+	case replyindex.FieldState:
+		return m.OldState(ctx)
+	case replyindex.FieldCtime:
+		return m.OldCtime(ctx)
+	case replyindex.FieldMtime:
+		return m.OldMtime(ctx)
+	}
+	return nil, fmt.Errorf("unknown ReplyIndex field %s", name)
+}
+
+// SetField sets the value of a field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReplyIndexMutation) SetField(name string, value ent.Value) error {
+	switch name {
+	case replyindex.FieldOid:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetOid(v)
+		return nil
+	case replyindex.FieldType:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetType(v)
+		return nil
+	case replyindex.FieldMid:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMid(v)
+		return nil
+	case replyindex.FieldRoot:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRoot(v)
+		return nil
+	case replyindex.FieldParent:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetParent(v)
+		return nil
+	case replyindex.FieldCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCount(v)
+		return nil
+	case replyindex.FieldRcount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetRcount(v)
+		return nil
+	case replyindex.FieldAcount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetAcount(v)
+		return nil
+	case replyindex.FieldLikes:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetLikes(v)
+		return nil
+	case replyindex.FieldHates:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetHates(v)
+		return nil
+	case replyindex.FieldReportCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetReportCount(v)
+		return nil
+	case replyindex.FieldState:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetState(v)
+		return nil
+	case replyindex.FieldCtime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetCtime(v)
+		return nil
+	case replyindex.FieldMtime:
+		v, ok := value.(time.Time)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetMtime(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReplyIndex field %s", name)
+}
+
+// AddedFields returns all numeric fields that were incremented/decremented during
+// this mutation.
+func (m *ReplyIndexMutation) AddedFields() []string {
+	var fields []string
+	if m.addoid != nil {
+		fields = append(fields, replyindex.FieldOid)
+	}
+	if m.add_type != nil {
+		fields = append(fields, replyindex.FieldType)
+	}
+	if m.addmid != nil {
+		fields = append(fields, replyindex.FieldMid)
+	}
+	if m.addroot != nil {
+		fields = append(fields, replyindex.FieldRoot)
+	}
+	if m.addparent != nil {
+		fields = append(fields, replyindex.FieldParent)
+	}
+	if m.addcount != nil {
+		fields = append(fields, replyindex.FieldCount)
+	}
+	if m.addrcount != nil {
+		fields = append(fields, replyindex.FieldRcount)
+	}
+	if m.addacount != nil {
+		fields = append(fields, replyindex.FieldAcount)
+	}
+	if m.addlikes != nil {
+		fields = append(fields, replyindex.FieldLikes)
+	}
+	if m.addhates != nil {
+		fields = append(fields, replyindex.FieldHates)
+	}
+	if m.addreport_count != nil {
+		fields = append(fields, replyindex.FieldReportCount)
+	}
+	if m.addstate != nil {
+		fields = append(fields, replyindex.FieldState)
+	}
+	return fields
+}
+
+// AddedField returns the numeric value that was incremented/decremented on a field
+// with the given name. The second boolean return value indicates that this field
+// was not set, or was not defined in the schema.
+func (m *ReplyIndexMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case replyindex.FieldOid:
+		return m.AddedOid()
+	case replyindex.FieldType:
+		return m.AddedType()
+	case replyindex.FieldMid:
+		return m.AddedMid()
+	case replyindex.FieldRoot:
+		return m.AddedRoot()
+	case replyindex.FieldParent:
+		return m.AddedParent()
+	case replyindex.FieldCount:
+		return m.AddedCount()
+	case replyindex.FieldRcount:
+		return m.AddedRcount()
+	case replyindex.FieldAcount:
+		return m.AddedAcount()
+	case replyindex.FieldLikes:
+		return m.AddedLikes()
+	case replyindex.FieldHates:
+		return m.AddedHates()
+	case replyindex.FieldReportCount:
+		return m.AddedReportCount()
+	case replyindex.FieldState:
+		return m.AddedState()
+	}
+	return nil, false
+}
+
+// AddField adds the value to the field with the given name. It returns an error if
+// the field is not defined in the schema, or if the type mismatched the field
+// type.
+func (m *ReplyIndexMutation) AddField(name string, value ent.Value) error {
+	switch name {
+	case replyindex.FieldOid:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddOid(v)
+		return nil
+	case replyindex.FieldType:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddType(v)
+		return nil
+	case replyindex.FieldMid:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddMid(v)
+		return nil
+	case replyindex.FieldRoot:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRoot(v)
+		return nil
+	case replyindex.FieldParent:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddParent(v)
+		return nil
+	case replyindex.FieldCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddCount(v)
+		return nil
+	case replyindex.FieldRcount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddRcount(v)
+		return nil
+	case replyindex.FieldAcount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddAcount(v)
+		return nil
+	case replyindex.FieldLikes:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddLikes(v)
+		return nil
+	case replyindex.FieldHates:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddHates(v)
+		return nil
+	case replyindex.FieldReportCount:
+		v, ok := value.(int32)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddReportCount(v)
+		return nil
+	case replyindex.FieldState:
+		v, ok := value.(int8)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddState(v)
+		return nil
+	}
+	return fmt.Errorf("unknown ReplyIndex numeric field %s", name)
+}
+
+// ClearedFields returns all nullable fields that were cleared during this
+// mutation.
+func (m *ReplyIndexMutation) ClearedFields() []string {
+	return nil
+}
+
+// FieldCleared returns a boolean indicating if a field with the given name was
+// cleared in this mutation.
+func (m *ReplyIndexMutation) FieldCleared(name string) bool {
+	_, ok := m.clearedFields[name]
+	return ok
+}
+
+// ClearField clears the value of the field with the given name. It returns an
+// error if the field is not defined in the schema.
+func (m *ReplyIndexMutation) ClearField(name string) error {
+	return fmt.Errorf("unknown ReplyIndex nullable field %s", name)
+}
+
+// ResetField resets all changes in the mutation for the field with the given name.
+// It returns an error if the field is not defined in the schema.
+func (m *ReplyIndexMutation) ResetField(name string) error {
+	switch name {
+	case replyindex.FieldOid:
+		m.ResetOid()
+		return nil
+	case replyindex.FieldType:
+		m.ResetType()
+		return nil
+	case replyindex.FieldMid:
+		m.ResetMid()
+		return nil
+	case replyindex.FieldRoot:
+		m.ResetRoot()
+		return nil
+	case replyindex.FieldParent:
+		m.ResetParent()
+		return nil
+	case replyindex.FieldCount:
+		m.ResetCount()
+		return nil
+	case replyindex.FieldRcount:
+		m.ResetRcount()
+		return nil
+	case replyindex.FieldAcount:
+		m.ResetAcount()
+		return nil
+	case replyindex.FieldLikes:
+		m.ResetLikes()
+		return nil
+	case replyindex.FieldHates:
+		m.ResetHates()
+		return nil
+	case replyindex.FieldReportCount:
+		m.ResetReportCount()
+		return nil
+	case replyindex.FieldState:
+		m.ResetState()
+		return nil
+	case replyindex.FieldCtime:
+		m.ResetCtime()
+		return nil
+	case replyindex.FieldMtime:
+		m.ResetMtime()
+		return nil
+	}
+	return fmt.Errorf("unknown ReplyIndex field %s", name)
+}
+
+// AddedEdges returns all edge names that were set/added in this mutation.
+func (m *ReplyIndexMutation) AddedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// AddedIDs returns all IDs (to other nodes) that were added for the given edge
+// name in this mutation.
+func (m *ReplyIndexMutation) AddedIDs(name string) []ent.Value {
+	return nil
+}
+
+// RemovedEdges returns all edge names that were removed in this mutation.
+func (m *ReplyIndexMutation) RemovedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// RemovedIDs returns all IDs (to other nodes) that were removed for the edge with
+// the given name in this mutation.
+func (m *ReplyIndexMutation) RemovedIDs(name string) []ent.Value {
+	return nil
+}
+
+// ClearedEdges returns all edge names that were cleared in this mutation.
+func (m *ReplyIndexMutation) ClearedEdges() []string {
+	edges := make([]string, 0, 0)
+	return edges
+}
+
+// EdgeCleared returns a boolean which indicates if the edge with the given name
+// was cleared in this mutation.
+func (m *ReplyIndexMutation) EdgeCleared(name string) bool {
+	return false
+}
+
+// ClearEdge clears the value of the edge with the given name. It returns an error
+// if that edge is not defined in the schema.
+func (m *ReplyIndexMutation) ClearEdge(name string) error {
+	return fmt.Errorf("unknown ReplyIndex unique edge %s", name)
+}
+
+// ResetEdge resets all changes to the edge with the given name in this mutation.
+// It returns an error if the edge is not defined in the schema.
+func (m *ReplyIndexMutation) ResetEdge(name string) error {
+	return fmt.Errorf("unknown ReplyIndex edge %s", name)
 }

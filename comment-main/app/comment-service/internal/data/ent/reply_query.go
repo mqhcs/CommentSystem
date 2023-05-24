@@ -3,9 +3,9 @@
 package ent
 
 import (
+	"comment-main/app/comment-service/internal/data/ent/predicate"
+	"comment-main/app/comment-service/internal/data/ent/reply"
 	"context"
-	"entcdemo/ent/predicate"
-	"entcdemo/ent/reply"
 	"fmt"
 	"math"
 
@@ -81,8 +81,8 @@ func (rq *ReplyQuery) FirstX(ctx context.Context) *Reply {
 
 // FirstID returns the first Reply ID from the query.
 // Returns a *NotFoundError when no Reply ID was found.
-func (rq *ReplyQuery) FirstID(ctx context.Context) (id int64, err error) {
-	var ids []int64
+func (rq *ReplyQuery) FirstID(ctx context.Context) (id int, err error) {
+	var ids []int
 	if ids, err = rq.Limit(1).IDs(setContextOp(ctx, rq.ctx, "FirstID")); err != nil {
 		return
 	}
@@ -94,7 +94,7 @@ func (rq *ReplyQuery) FirstID(ctx context.Context) (id int64, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (rq *ReplyQuery) FirstIDX(ctx context.Context) int64 {
+func (rq *ReplyQuery) FirstIDX(ctx context.Context) int {
 	id, err := rq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -132,8 +132,8 @@ func (rq *ReplyQuery) OnlyX(ctx context.Context) *Reply {
 // OnlyID is like Only, but returns the only Reply ID in the query.
 // Returns a *NotSingularError when more than one Reply ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (rq *ReplyQuery) OnlyID(ctx context.Context) (id int64, err error) {
-	var ids []int64
+func (rq *ReplyQuery) OnlyID(ctx context.Context) (id int, err error) {
+	var ids []int
 	if ids, err = rq.Limit(2).IDs(setContextOp(ctx, rq.ctx, "OnlyID")); err != nil {
 		return
 	}
@@ -149,7 +149,7 @@ func (rq *ReplyQuery) OnlyID(ctx context.Context) (id int64, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (rq *ReplyQuery) OnlyIDX(ctx context.Context) int64 {
+func (rq *ReplyQuery) OnlyIDX(ctx context.Context) int {
 	id, err := rq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -177,7 +177,7 @@ func (rq *ReplyQuery) AllX(ctx context.Context) []*Reply {
 }
 
 // IDs executes the query and returns a list of Reply IDs.
-func (rq *ReplyQuery) IDs(ctx context.Context) (ids []int64, err error) {
+func (rq *ReplyQuery) IDs(ctx context.Context) (ids []int, err error) {
 	if rq.ctx.Unique == nil && rq.path != nil {
 		rq.Unique(true)
 	}
@@ -189,7 +189,7 @@ func (rq *ReplyQuery) IDs(ctx context.Context) (ids []int64, err error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (rq *ReplyQuery) IDsX(ctx context.Context) []int64 {
+func (rq *ReplyQuery) IDsX(ctx context.Context) []int {
 	ids, err := rq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -261,12 +261,12 @@ func (rq *ReplyQuery) Clone() *ReplyQuery {
 // Example:
 //
 //	var v []struct {
-//		Message string `json:"message,omitempty"`
+//		Rpid int64 `json:"rpid,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Reply.Query().
-//		GroupBy(reply.FieldMessage).
+//		GroupBy(reply.FieldRpid).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (rq *ReplyQuery) GroupBy(field string, fields ...string) *ReplyGroupBy {
@@ -284,11 +284,11 @@ func (rq *ReplyQuery) GroupBy(field string, fields ...string) *ReplyGroupBy {
 // Example:
 //
 //	var v []struct {
-//		Message string `json:"message,omitempty"`
+//		Rpid int64 `json:"rpid,omitempty"`
 //	}
 //
 //	client.Reply.Query().
-//		Select(reply.FieldMessage).
+//		Select(reply.FieldRpid).
 //		Scan(ctx, &v)
 func (rq *ReplyQuery) Select(fields ...string) *ReplySelect {
 	rq.ctx.Fields = append(rq.ctx.Fields, fields...)
@@ -364,7 +364,7 @@ func (rq *ReplyQuery) sqlCount(ctx context.Context) (int, error) {
 }
 
 func (rq *ReplyQuery) querySpec() *sqlgraph.QuerySpec {
-	_spec := sqlgraph.NewQuerySpec(reply.Table, reply.Columns, sqlgraph.NewFieldSpec(reply.FieldID, field.TypeInt64))
+	_spec := sqlgraph.NewQuerySpec(reply.Table, reply.Columns, sqlgraph.NewFieldSpec(reply.FieldID, field.TypeInt))
 	_spec.From = rq.sql
 	if unique := rq.ctx.Unique; unique != nil {
 		_spec.Unique = *unique

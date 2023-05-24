@@ -3,9 +3,9 @@
 package ent
 
 import (
+	"comment-main/app/comment-service/internal/data/ent/predicate"
+	"comment-main/app/comment-service/internal/data/ent/reply"
 	"context"
-	"entcdemo/ent/predicate"
-	"entcdemo/ent/reply"
 	"errors"
 	"fmt"
 	"time"
@@ -25,6 +25,19 @@ type ReplyUpdate struct {
 // Where appends a list predicates to the ReplyUpdate builder.
 func (ru *ReplyUpdate) Where(ps ...predicate.Reply) *ReplyUpdate {
 	ru.mutation.Where(ps...)
+	return ru
+}
+
+// SetRpid sets the "rpid" field.
+func (ru *ReplyUpdate) SetRpid(i int64) *ReplyUpdate {
+	ru.mutation.ResetRpid()
+	ru.mutation.SetRpid(i)
+	return ru
+}
+
+// AddRpid adds i to the "rpid" field.
+func (ru *ReplyUpdate) AddRpid(i int64) *ReplyUpdate {
+	ru.mutation.AddRpid(i)
 	return ru
 }
 
@@ -151,13 +164,19 @@ func (ru *ReplyUpdate) ExecX(ctx context.Context) {
 }
 
 func (ru *ReplyUpdate) sqlSave(ctx context.Context) (n int, err error) {
-	_spec := sqlgraph.NewUpdateSpec(reply.Table, reply.Columns, sqlgraph.NewFieldSpec(reply.FieldID, field.TypeInt64))
+	_spec := sqlgraph.NewUpdateSpec(reply.Table, reply.Columns, sqlgraph.NewFieldSpec(reply.FieldID, field.TypeInt))
 	if ps := ru.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := ru.mutation.Rpid(); ok {
+		_spec.SetField(reply.FieldRpid, field.TypeInt64, value)
+	}
+	if value, ok := ru.mutation.AddedRpid(); ok {
+		_spec.AddField(reply.FieldRpid, field.TypeInt64, value)
 	}
 	if value, ok := ru.mutation.Message(); ok {
 		_spec.SetField(reply.FieldMessage, field.TypeString, value)
@@ -213,6 +232,19 @@ type ReplyUpdateOne struct {
 	fields   []string
 	hooks    []Hook
 	mutation *ReplyMutation
+}
+
+// SetRpid sets the "rpid" field.
+func (ruo *ReplyUpdateOne) SetRpid(i int64) *ReplyUpdateOne {
+	ruo.mutation.ResetRpid()
+	ruo.mutation.SetRpid(i)
+	return ruo
+}
+
+// AddRpid adds i to the "rpid" field.
+func (ruo *ReplyUpdateOne) AddRpid(i int64) *ReplyUpdateOne {
+	ruo.mutation.AddRpid(i)
+	return ruo
 }
 
 // SetMessage sets the "message" field.
@@ -351,7 +383,7 @@ func (ruo *ReplyUpdateOne) ExecX(ctx context.Context) {
 }
 
 func (ruo *ReplyUpdateOne) sqlSave(ctx context.Context) (_node *Reply, err error) {
-	_spec := sqlgraph.NewUpdateSpec(reply.Table, reply.Columns, sqlgraph.NewFieldSpec(reply.FieldID, field.TypeInt64))
+	_spec := sqlgraph.NewUpdateSpec(reply.Table, reply.Columns, sqlgraph.NewFieldSpec(reply.FieldID, field.TypeInt))
 	id, ok := ruo.mutation.ID()
 	if !ok {
 		return nil, &ValidationError{Name: "id", err: errors.New(`ent: missing "Reply.id" for update`)}
@@ -375,6 +407,12 @@ func (ruo *ReplyUpdateOne) sqlSave(ctx context.Context) (_node *Reply, err error
 				ps[i](selector)
 			}
 		}
+	}
+	if value, ok := ruo.mutation.Rpid(); ok {
+		_spec.SetField(reply.FieldRpid, field.TypeInt64, value)
+	}
+	if value, ok := ruo.mutation.AddedRpid(); ok {
+		_spec.AddField(reply.FieldRpid, field.TypeInt64, value)
 	}
 	if value, ok := ruo.mutation.Message(); ok {
 		_spec.SetField(reply.FieldMessage, field.TypeString, value)
@@ -426,3 +464,4 @@ func (ruo *ReplyUpdateOne) sqlSave(ctx context.Context) (_node *Reply, err error
 	ruo.mutation.done = true
 	return _node, nil
 }
+

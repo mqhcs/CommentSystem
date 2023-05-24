@@ -3,9 +3,9 @@
 package ent
 
 import (
+	"comment-main/app/comment-service/internal/data/ent/predicate"
+	"comment-main/app/comment-service/internal/data/ent/reply"
 	"context"
-	"entcdemo/ent/predicate"
-	"entcdemo/ent/reply"
 
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
@@ -40,7 +40,7 @@ func (rd *ReplyDelete) ExecX(ctx context.Context) int {
 }
 
 func (rd *ReplyDelete) sqlExec(ctx context.Context) (int, error) {
-	_spec := sqlgraph.NewDeleteSpec(reply.Table, sqlgraph.NewFieldSpec(reply.FieldID, field.TypeInt64))
+	_spec := sqlgraph.NewDeleteSpec(reply.Table, sqlgraph.NewFieldSpec(reply.FieldID, field.TypeInt))
 	if ps := rd.mutation.predicates; len(ps) > 0 {
 		_spec.Predicate = func(selector *sql.Selector) {
 			for i := range ps {
